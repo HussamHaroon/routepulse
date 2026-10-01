@@ -1,0 +1,4 @@
+# Local SQLite database (recreated + seeded automatically on first run)
+data.db
+data.db-wal
+data.db-shm
