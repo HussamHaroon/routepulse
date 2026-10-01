@@ -38,6 +38,7 @@ localhost:8787 (single URL: Express serves app/dist + API + WS)            SQLit
 ```
 
 - ETA engine: remaining distance along route polyline ÷ rolling average observed speed, adjusted by trip delay; **confidence** (high/medium/low) from sample count, speed variance and position freshness.
+- **Boarding alarm:** on any track page, pick your stop and hit ARM — when the live ETA crosses 2 minutes the browser sends a real notification ("Your bus is almost here"). Runs entirely on the client against the same ticking ETAs.
 - Transfers: server-side search finds multi-route connections through shared stops.
 - Live updates: WebSocket push with automatic polling fallback.
 

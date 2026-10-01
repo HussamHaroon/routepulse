@@ -206,6 +206,47 @@ export default function Track() {
 
   const etaFor = (stopId) => etas?.find((e) => e.stop_id === stopId)
 
+  // ---- BOARDING ALARM ------------------------------------------------------
+  // Pick a stop; when its live ETA crosses the threshold, fire a browser
+  // notification + in-page banner. Uses the same confidence-rated ETAs the
+  // sidebar ticks — no extra backend.
+  const [alarmStop, setAlarmStop] = useState('')
+  const [alarmArmed, setAlarmArmed] = useState(false)
+  const [alarmFired, setAlarmFired] = useState(null) // { stop_name, eta_min }
+  const [alarmDenied, setAlarmDenied] = useState(false)
+  const firedRef = useRef(false)
+
+  const armAlarm = async () => {
+    if (!alarmStop) return
+    if (!('Notification' in window)) return setAlarmDenied(true)
+    let perm = Notification.permission
+    if (perm === 'default') perm = await Notification.requestPermission()
+    if (perm !== 'granted') return setAlarmDenied(true)
+    setAlarmDenied(false)
+    firedRef.current = false
+    setAlarmFired(null)
+    setAlarmArmed(true)
+  }
+
+  useEffect(() => {
+    if (!alarmArmed || !alarmStop || !etas || firedRef.current) return
+    const stop = route?.stops?.find((s) => String(s.stop_id) === String(alarmStop))
+    const eta = etaFor(alarmStop)
+    const etaMin = eta?.eta_min
+    if (!stop || etaMin == null) return
+    if (etaMin <= 2) {
+      firedRef.current = true
+      const hit = { stop_name: stop.stop_name, eta_min: Math.max(1, Math.round(etaMin)) }
+      setAlarmFired(hit)
+      try {
+        new Notification('Your bus is almost here', {
+          body: `${hit.stop_name} in ~${hit.eta_min} min — time to head out.`,
+          tag: 'routepulse-alarm',
+        })
+      } catch { /* some browsers require SW; banner already shows */ }
+    }
+  }, [alarmArmed, alarmStop, etas, route, now])
+
   if (routeErr)
     return (
       <div className="space-y-4">
@@ -372,6 +413,55 @@ export default function Track() {
             const remainSec = base == null ? null : base - (now - fetchedAt) / 1000
             return <EtaRow key={stop.stop_id} stop={stop} eta={eta} remainSec={remainSec} />
           })}
+          {/* ---- BOARDING ALARM ---- */}
+          <div className="border-t border-edge px-4 py-3">
+            {alarmFired ? (
+              <div className="rounded-lg border border-live/50 bg-live/10 px-3 py-2.5">
+                <Mono className="text-xs font-bold tracking-widest text-live">
+                  ⏰ ALARM — {String(alarmFired.stop_name).toUpperCase()} IN ~{alarmFired.eta_min} MIN
+                </Mono>
+                <Mono className="mt-1 block text-xs text-fog">Time to head out. Bus is nearly at your stop.</Mono>
+                <button
+                  onClick={() => { setAlarmFired(null); setAlarmArmed(false); firedRef.current = false }}
+                  className="mt-2 min-h-9 rounded-md border border-edge px-3 py-1.5 font-mono text-xs font-bold tracking-widest text-fog hover:text-snow"
+                >
+                  SET ANOTHER
+                </button>
+              </div>
+            ) : (
+              <>
+                <Mono className="block text-xs font-bold tracking-[0.25em] text-fog">BOARDING ALARM</Mono>
+                <div className="mt-2 flex gap-2">
+                  <select
+                    value={alarmStop}
+                    onChange={(e) => setAlarmStop(e.target.value)}
+                    className="min-h-11 w-full rounded-lg border border-edge bg-panel2 px-2 py-2.5 font-mono text-xs text-snow outline-none focus:border-live/60"
+                  >
+                    <option value="">— pick my stop —</option>
+                    {route.stops.map((s) => (
+                      <option key={s.stop_id} value={s.stop_id}>{s.stop_name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={alarmArmed ? () => { setAlarmArmed(false); firedRef.current = false } : armAlarm}
+                    disabled={!alarmStop}
+                    className={`min-h-11 shrink-0 rounded-lg border px-3 font-mono text-xs font-bold tracking-widest transition disabled:opacity-40 ${
+                      alarmArmed ? 'border-live/60 bg-live/15 text-live' : 'border-edge bg-panel2 text-fog hover:text-snow'
+                    }`}
+                  >
+                    {alarmArmed ? 'ARMED ✓' : 'ARM'}
+                  </button>
+                </div>
+                <Mono className="mt-1.5 block text-xs text-fog">
+                  {alarmDenied
+                    ? 'Notifications blocked — enable them for this site.'
+                    : alarmArmed
+                      ? 'Watching the live ETA — we will ping you ~2 min before it reaches your stop.'
+                      : 'Get a notification when your bus is 2 minutes away.'}
+                </Mono>
+              </>
+            )}
+          </div>
           <div className="border-t border-edge px-4 py-2.5">
             <Mono className="text-xs leading-relaxed text-fog">
               ETA = DISTANCE TO STOP ÷ ROLLING AVG SPEED + DELAY · CONFIDENCE FROM SPEED

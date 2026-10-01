@@ -13,3 +13,5 @@ docs/
 handoff/
 agents/
 crew-hq/
+
+.vercel
