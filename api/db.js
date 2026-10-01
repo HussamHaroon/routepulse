@@ -64,6 +64,19 @@ CREATE TABLE IF NOT EXISTS alert (
   created_at    TEXT,
   active        INTEGER DEFAULT 1
 );
+CREATE TABLE IF NOT EXISTS meta (
+  key           TEXT PRIMARY KEY,
+  value         TEXT
+);
+-- WP3b: ETA accuracy self-measurement — what we predicted vs what happened.
+CREATE TABLE IF NOT EXISTS eta_sample (
+  sample_id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  trip_id            INTEGER,
+  route_id           TEXT,
+  predicted_eta_min  REAL,
+  actual_eta_min     REAL,
+  measured_at        TEXT
+);
 `);
 
 // Migration for DBs created before WP2: add fare_pkr to route if missing.
