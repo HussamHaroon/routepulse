@@ -1,33 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import VideoScrollSection from '../components/VideoScrollSection.jsx';
+import FeatureSection from '../components/FeatureSection.jsx';
 import { Link } from 'react-router-dom'
 import { getStats } from '../api'
 
 // Pexels hotlinks — free license, credited in the footer below.
 
-const FEATURES = [
-  {
-    idx: '01',
-    img: 'https://images.pexels.com/photos/14471680/pexels-photo-14471680.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-    title: 'Live tracking',
-    line: 'Every bus on the city map, its position refreshed every two seconds.',
-    to: '/search',
-  },
-  {
-    idx: '02',
-    img: 'https://images.pexels.com/photos/33892983/pexels-photo-33892983.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-    title: 'Smart ETA',
-    line: 'Per-stop arrivals computed from distance along route, rolling average speed and live delay.',
-    to: '/search',
-  },
-  {
-    idx: '03',
-    img: 'https://images.pexels.com/photos/30405834/pexels-photo-30405834.jpeg?auto=compress&cs=tinysrgb&h=650&w=940',
-    title: 'Operator analytics',
-    line: 'Fleet KPIs, delay hotspots and instant service alerts in one control room.',
-    to: '/operator',
-  },
-]
+/* FEATURES array removed — replaced by FeatureSection component */
 
 // overlay copy steps over the scrubbed video (progress windows)
 const STEPS = [
@@ -217,41 +196,7 @@ export default function Home() {
       <VideoScrollSection />
 
       {/* ---------- FEATURE CARDS — printed timetable panels ---------- */}
-      <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
-        <div className="mb-10 font-mono text-xs tracking-[0.3em] text-fog">
-          WHAT THE TIMETABLE KNOWS
-        </div>
-        <div className="grid gap-6 md:grid-cols-3">
-          {FEATURES.map((f) => (
-            <Link
-              key={f.idx}
-              to={f.to}
-              className="group overflow-hidden rounded-lg border border-edge bg-paper-deep transition-colors hover:border-signal/50"
-            >
-              <div className="relative h-48 overflow-hidden">
-                <img
-                  src={f.img}
-                  alt={f.title}
-                  loading="lazy"
-                  className="rp-warm h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-              </div>
-              <div className="p-6">
-                <div className="font-mono text-xs tracking-[0.25em] text-fog">
-                  {f.idx}
-                </div>
-                <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight text-snow">
-                  {f.title}
-                </h3>
-                <p className="mt-2 text-sm leading-relaxed text-fog">{f.line}</p>
-                <div className="mt-4 font-mono text-xs tracking-[0.25em] text-signal transition-transform duration-300 group-hover:translate-x-1">
-                  LEARN MORE
-                </div>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
+      <FeatureSection />
 
       {/* ---------- LIVE STATS STRIP ---------- */}
       <StatsStrip />
