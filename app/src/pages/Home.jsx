@@ -105,14 +105,27 @@ function VideoScrub() {
     const video = videoRef.current
     if (!section || !video) return
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let inView = false
 
-    // play on enter, pause on exit (skipped under reduced motion)
+    // self-healing playback: (re)attempt whenever the clip gains data
+    const syncPlay = () => {
+      if (reduced || !inView) {
+        video.pause()
+        return
+      }
+      video.play().catch(() => {})
+    }
+    const onData = () => syncPlay()
+    video.addEventListener('canplay', onData)
+    video.addEventListener('loadeddata', onData)
+
+    // play on enter, pause on exit
     let io
     if (!reduced) {
       io = new IntersectionObserver(
         ([e]) => {
-          if (e.isIntersecting) video.play().catch(() => {})
-          else video.pause()
+          inView = e.isIntersecting
+          syncPlay()
         },
         { threshold: 0.25 }
       )
@@ -135,6 +148,8 @@ function VideoScrub() {
     return () => {
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
+      video.removeEventListener('canplay', onData)
+      video.removeEventListener('loadeddata', onData)
       if (io) io.disconnect()
       video.pause()
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
