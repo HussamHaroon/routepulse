@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getAlerts, getCrowd, getEtas, getRoute, reportCrowd } from '../api'
 import { useLiveLocations, usePoll, useSmoothedLocations, useTick } from '../hooks'
@@ -158,17 +158,26 @@ export default function Track() {
   const { smooth, trails } = useSmoothedLocations(routeBuses)
 
   // Alert transmission ping — an expanding radar ring fires at the route's
-  // first stop when a WS alert lands, making the two-second round trip visible.
+  // first stop when a fresh alert lands (WS or poll), making the two-second
+  // round trip visible regardless of transport.
   const [ping, setPing] = useState(null)
+  const pingedAlerts = useRef(new Set())
   useEffect(() => {
-    if (!lastAlert) return
-    if (lastAlert.route_id && String(lastAlert.route_id) !== String(routeId)) return
+    const fresh = allAlerts.filter(
+      (a) =>
+        !pingedAlerts.current.has(a.alert_id) &&
+        Date.now() - new Date(a.created_at).getTime() < 15000
+    )
+    if (!fresh.length) return
+    const a = fresh[fresh.length - 1]
+    fresh.forEach((x) => pingedAlerts.current.add(x.alert_id))
+    if (a.route_id && String(a.route_id) !== String(routeId)) return
     const at = route?.stops?.[0]
     if (!at) return
-    setPing({ lat: at.lat, lng: at.lng, key: `ping-${lastAlert.alert_id}` })
+    setPing({ lat: at.lat, lng: at.lng, key: `ping-${a.alert_id}` })
     const id = setTimeout(() => setPing(null), 7000)
     return () => clearTimeout(id)
-  }, [lastAlert, routeId, route])
+  }, [allAlerts, routeId, route])
 
   // crowd report (P1): latest level + send a new one
   const [crowd, setCrowd] = useState(null)
