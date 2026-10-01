@@ -214,6 +214,7 @@ export default function Track() {
   const [alarmArmed, setAlarmArmed] = useState(false)
   const [alarmFired, setAlarmFired] = useState(null) // { stop_name, eta_min }
   const [alarmDenied, setAlarmDenied] = useState(false)
+  const [voiceOn, setVoiceOn] = useState(true)
   const firedRef = useRef(false)
 
   const armAlarm = async () => {
@@ -244,8 +245,17 @@ export default function Track() {
           tag: 'routepulse-alarm',
         })
       } catch { /* some browsers require SW; banner already shows */ }
+      if (voiceOn) {
+        try {
+          const u = new SpeechSynthesisUtterance(
+            `Attention: your bus arrives at ${hit.stop_name} in about ${hit.eta_min} minutes.`
+          )
+          u.rate = 1.05
+          window.speechSynthesis.speak(u)
+        } catch { /* speech is optional — banner + notification still fire */ }
+      }
     }
-  }, [alarmArmed, alarmStop, etas, route, now])
+  }, [alarmArmed, alarmStop, etas, route, now, voiceOn])
 
   if (routeErr)
     return (
@@ -450,6 +460,15 @@ export default function Track() {
                     }`}
                   >
                     {alarmArmed ? 'ARMED ✓' : 'ARM'}
+                  </button>
+                  <button
+                    onClick={() => setVoiceOn((v) => !v)}
+                    title="Spoken announcement when the alarm fires"
+                    className={`min-h-11 shrink-0 rounded-lg border px-2.5 font-mono text-xs font-bold tracking-widest transition ${
+                      voiceOn ? 'border-edge bg-panel2 text-fog hover:text-snow' : 'border-edge bg-panel2 text-fog/50 hover:text-fog'
+                    }`}
+                  >
+                    {voiceOn ? 'VOX' : 'MUTE'}
                   </button>
                 </div>
                 <Mono className="mt-1.5 block text-xs text-fog">

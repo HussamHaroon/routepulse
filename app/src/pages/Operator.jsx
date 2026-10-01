@@ -24,20 +24,20 @@ import {
   agoMin,
 } from '../components'
 
-// Muted night-register palette, keyed by both mock (R#) and live (numeric) ids.
+// Vivid night-register palette, keyed by both mock (R#) and live (numeric) ids.
 const ROUTE_COLORS = {
-  R7: '#2E7D4F',
-  R5: '#E4572E',
-  R3: '#B3402E',
-  R9: '#6E6656',
-  1: '#2E7D4F',
-  2: '#E4572E',
-  3: '#B3402E',
-  4: '#6E6656',
-  5: '#C9A227',
-  6: '#3F6E5E',
-  7: '#D07B3A',
-  8: '#8A8F98',
+  R7: '#2ECC71',
+  R5: '#FF6B35',
+  R3: '#FF4757',
+  R9: '#F1C40F',
+  1: '#2ECC71',
+  2: '#FF6B35',
+  3: '#FF4757',
+  4: '#F1C40F',
+  5: '#1DD1A1',
+  6: '#16C79A',
+  7: '#FFA502',
+  8: '#7D5FFF',
 }
 
 export default function Operator() {

@@ -26,7 +26,7 @@ const POSITION_STALE_SEC = 25; // past this, ETA confidence drops to 'low'
 // In-process GPS simulator (single-process deploys): on unless SIMULATE=0.
 const SIMULATE = process.env.SIMULATE !== '0';
 const SIM_BASE_KMH = Number(process.env.SIM_SPEED_KMH || 28);
-const SIM_INTERVAL_MS = 2000;
+const SIM_INTERVAL_MS = 1000;
 
 const OPERATOR_KEY = process.env.OPERATOR_KEY || 'routepulse-demo-key';
 
