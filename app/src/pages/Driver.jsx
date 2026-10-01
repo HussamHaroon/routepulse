@@ -130,7 +130,7 @@ export default function Driver() {
     <div className="space-y-6">
       <div>
         <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
-          [ DRIVER CONSOLE ]
+          DRIVER CONSOLE
         </Mono>
         <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
           Start your trip
@@ -220,7 +220,7 @@ export default function Driver() {
           <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-phos/40 bg-phos/5 p-5">
             <div>
               <Mono className="text-[10px] tracking-[0.3em] text-phos">
-                [ TRIP {trip.trip_id} ACTIVE ]
+                TRIP {trip.trip_id} ACTIVE
               </Mono>
               <div className="mt-1 font-mono text-2xl font-extrabold text-snow">
                 BUS {trip.bus_id} · ROUTE {String(trip.route_id).replace('R', '')}

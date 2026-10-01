@@ -23,7 +23,7 @@ export const RouteChip = ({ route, big = false }) => (
       big ? 'px-3 py-1 text-lg' : 'px-2 py-0.5 text-xs'
     }`}
   >
-    [ ROUTE {routeNumber(route)} ]
+    ROUTE {routeNumber(route)}
   </span>
 )
 

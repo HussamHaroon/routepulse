@@ -73,7 +73,7 @@ export default function Operator() {
       <div className="flex flex-wrap items-center gap-3">
         <div>
           <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
-            [ OPERATOR DASHBOARD ]
+            OPERATOR DASHBOARD
           </Mono>
           <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
             Network control
@@ -118,7 +118,7 @@ export default function Operator() {
           {/* publisher */}
           <div className="rounded-xl border border-edge bg-panel p-5">
             <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
-              [ PUBLISH SERVICE ALERT ]
+              PUBLISH SERVICE ALERT
             </Mono>
             <div className="mt-3 space-y-3">
               <select
@@ -165,7 +165,7 @@ export default function Operator() {
           {/* recent alerts */}
           <div className="rounded-xl border border-edge bg-panel">
             <div className="border-b border-edge px-4 py-3 font-mono text-[10px] font-bold tracking-[0.3em] text-fog">
-              [ ACTIVE ALERTS ]
+              ACTIVE ALERTS
             </div>
             <div className="max-h-56 overflow-y-auto">
               {(allAlerts.data?.alerts || []).map((a) => (
@@ -198,7 +198,7 @@ export default function Operator() {
       <section className="overflow-hidden rounded-xl border border-edge bg-panel">
         <div className="flex items-center justify-between border-b border-edge px-4 py-3">
           <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
-            [ LIVE FLEET ]
+            LIVE FLEET
           </Mono>
           <Mono className="text-[10px] text-fog">
             {locations.length} BUSES REPORTING
@@ -226,7 +226,7 @@ export default function Operator() {
                 >
                   <td className="px-4 py-3 font-bold text-snow">{b.bus_id}</td>
                   <td className="px-4 py-3" style={{ color: ROUTE_COLORS[b.route_id] || '#8B98A5' }}>
-                    {b.route_id ? `[ ROUTE ${routeNumber({ route_id: b.route_id })} ]` : '—'}
+                    {b.route_id ? `ROUTE ${routeNumber({ route_id: b.route_id })}` : '—'}
                   </td>
                   <td className="px-4 py-3 text-fog">{driverFor(b)}</td>
                   <td className="px-4 py-3">

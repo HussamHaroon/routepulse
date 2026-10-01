@@ -66,7 +66,7 @@ function DestinationRoll() {
   return (
     <div className="rp-roll bg-panel">
       <span className="rp-bus" aria-hidden="true" />
-      <div className="rp-roll-window font-display">
+      <div className="rp-roll-window font-display uppercase">
         <div
           className="rp-roll-strip"
           style={{ transform: `translateY(-${(i % ROLL_ROUTES.length) * 2.4}rem)` }}
@@ -74,11 +74,11 @@ function DestinationRoll() {
           {rows.map(([num, from, to], k) => (
             <div key={k} className="rp-roll-row">
               <span className="font-mono text-xs font-medium text-signal">{num}</span>
-              <span className="text-xl font-semibold tracking-tight text-snow sm:text-2xl">
+              <span className="text-xl font-semibold uppercase tracking-tight text-snow sm:text-2xl">
                 {from}
               </span>
               <span className="text-fog">⟶</span>
-              <span className="text-xl font-semibold tracking-tight text-snow sm:text-2xl">
+              <span className="text-xl font-semibold uppercase tracking-tight text-snow sm:text-2xl">
                 {to}
               </span>
             </div>
@@ -187,7 +187,7 @@ function VideoScrub() {
               opacity: `calc(clamp(0, (var(--p) - ${s.a}) / 0.08, 1) * clamp(0, (${s.b} - var(--p)) / 0.08, 1))`,
             }}
           >
-            <h3 className="text-center font-display text-4xl font-bold tracking-tight text-snow drop-shadow-[0_1px_14px_rgba(244,239,228,0.55)] sm:text-6xl">
+            <h3 className="text-center font-display text-4xl font-semibold uppercase tracking-tight text-snow drop-shadow-[0_1px_14px_rgba(244,239,228,0.55)] sm:text-6xl">
               {s.label.split(' ')[0]}{' '}
               <em className="text-signal">{s.label.split(' ').slice(1).join(' ')}</em>
             </h3>
@@ -249,13 +249,13 @@ function StatsStrip() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <div className="mb-8 flex items-center gap-3 font-mono text-[10px] tracking-[0.25em] text-fog">
           <span className={`h-2 w-2 rounded-full ${live ? 'bg-live rp-blink' : 'bg-signal'}`} />
-          {live ? '[ LIVE NETWORK ]' : '[ DEMO DATA — API OFFLINE ]'}
+          {live ? 'LIVE NETWORK' : 'DEMO DATA — API OFFLINE'}
         </div>
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-5">
           {tiles.map(([label, value]) => (
             <div key={label} className="border-l-2 border-ink/15 pl-4">
               <div className="font-mono text-[10px] tracking-[0.2em] text-fog">{label}</div>
-              <div className="mt-2 font-display text-4xl font-bold text-snow">{value}</div>
+              <div className="mt-2 font-display text-4xl font-semibold text-snow">{value}</div>
             </div>
           ))}
         </div>
@@ -273,9 +273,9 @@ export default function Home() {
         <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6">
           <div className="mb-7 flex items-center gap-3 font-mono text-[10px] tracking-[0.3em] text-fog">
             <span className="h-2 w-2 rounded-full bg-live rp-blink" />
-            [ LIVE NETWORK — LAHORE ]
+            LIVE NETWORK — LAHORE
           </div>
-          <h1 className="font-display text-[clamp(2.6rem,7vw,5rem)] font-bold leading-[1.02] tracking-tight text-snow">
+          <h1 className="font-display text-[clamp(2.6rem,7vw,5rem)] font-semibold leading-[1.02] tracking-tight text-snow">
             <span className="rp-split">
               <span style={{ animationDelay: '0.05s' }}>The timetable</span>
             </span>
@@ -319,7 +319,7 @@ export default function Home() {
       {/* ---------- FEATURE CARDS — printed timetable panels ---------- */}
       <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
         <div className="mb-10 font-mono text-[10px] tracking-[0.3em] text-fog">
-          [ WHAT THE TIMETABLE KNOWS ]
+          WHAT THE TIMETABLE KNOWS
         </div>
         <div className="grid gap-6 md:grid-cols-3">
           {FEATURES.map((f) => (
@@ -338,14 +338,14 @@ export default function Home() {
               </div>
               <div className="p-6">
                 <div className="font-mono text-[10px] tracking-[0.25em] text-fog">
-                  [ {f.idx} ]
+                  {f.idx}
                 </div>
-                <h3 className="mt-2 font-display text-2xl font-bold tracking-tight text-snow">
+                <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight text-snow">
                   {f.title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-fog">{f.line}</p>
                 <div className="mt-4 font-mono text-[10px] tracking-[0.25em] text-signal transition-transform duration-300 group-hover:translate-x-1">
-                  [ LEARN MORE ]
+                  LEARN MORE
                 </div>
               </div>
             </Link>

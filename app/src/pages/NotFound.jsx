@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <div className="rp-grid-bg flex min-h-[65vh] flex-col items-center justify-center rounded-2xl border border-edge py-16 text-center">
       <div className="font-mono text-[10px] tracking-[0.3em] text-fog">
-        [ ROUTE NOT FOUND ]
+        ROUTE NOT FOUND
       </div>
       <h1 className="mt-4 font-display text-7xl font-bold tracking-tight text-snow">
         404

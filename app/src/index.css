@@ -30,9 +30,9 @@
   --color-alert: #b3402e; /* late */
   --color-cyan: #e4572e; /* SIGNAL ORANGE accent */
 
-  --font-display: 'Zodiak', Georgia, 'Times New Roman', serif;
+  --font-display: 'Clash Display', 'Satoshi', ui-sans-serif, system-ui, sans-serif;
   --font-text: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'Sometype Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --ease-house: cubic-bezier(0.19, 1, 0.22, 1);
 }
@@ -49,11 +49,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Serif headlines everywhere a page didn't pin a font class */
+/* Headlines: Clash Display 600, tight leading (utilities may override) */
 h1,
 h2,
 h3 {
   font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 /* House easing on every transition in the app */

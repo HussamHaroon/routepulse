@@ -232,7 +232,7 @@ export default function Track() {
               }`}
             >
               <Mono className="shrink-0 text-[10px] font-extrabold tracking-widest text-amber">
-                {a.viaWs ? '[ JUST NOW · LIVE ]' : '[ SERVICE ALERT ]'}
+                {a.viaWs ? 'JUST NOW · LIVE' : 'SERVICE ALERT'}
               </Mono>
               <p className="flex-1 text-sm text-snow">{a.message}</p>
               <Mono className="shrink-0 text-[10px] text-fog">
@@ -285,7 +285,7 @@ export default function Track() {
           <div className="rounded-xl border border-edge bg-panel px-4 py-3">
             <div className="flex flex-wrap items-center gap-3">
               <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
-                [ HOW CROWDED? ]
+                HOW CROWDED?
               </Mono>
               <div className="flex gap-2">
                 {CROWD_LEVELS.map(({ label, value }) => (
@@ -317,7 +317,7 @@ export default function Track() {
         <aside className="rounded-xl border border-edge bg-panel">
           <div className="flex items-center justify-between border-b border-edge px-4 py-3">
             <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
-              [ STOP ETAS ]
+              STOP ETAS
             </Mono>
             <Mono className="text-[10px] text-fog">
               {etas ? 'TICKING' : 'LOADING…'}

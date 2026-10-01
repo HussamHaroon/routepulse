@@ -113,8 +113,8 @@ function ResultCard({ route, locations, faved, onToggleFav }) {
       {isTransfer && (
         <div className="mt-3 rounded-lg border border-amber/30 bg-ink/60 px-3 py-2 font-mono text-xs text-amber">
           TRANSFER AT{' '}
-          <span className="font-bold">{route.transfer.via_stop}</span> → THEN [ ROUTE{' '}
-          {routeNumber({ route_id: route.transfer.then_route_id, number: route.transfer.then_route_id })} ]{' '}
+          <span className="font-bold">{route.transfer.via_stop}</span> → THEN ROUTE{' '}
+          {routeNumber({ route_id: route.transfer.then_route_id, number: route.transfer.then_route_id })}{' '}
           {route.transfer.then_route_name}
         </div>
       )}
@@ -179,7 +179,7 @@ export default function Search() {
       {/* hero */}
       <section className="rp-grid-bg rounded-2xl border border-edge px-6 py-10 sm:px-10">
         <Mono className="text-xs font-semibold tracking-[0.3em] text-phos">
-          [ PUBLIC TRANSIT · LIVE NETWORK ]
+          PUBLIC TRANSIT · LIVE NETWORK
         </Mono>
         <h1 className="mt-3 max-w-3xl text-4xl font-bold leading-[1.05] tracking-tight sm:text-6xl">
           Know your bus.
@@ -195,7 +195,7 @@ export default function Search() {
       {/* search panel */}
       <section className="rounded-2xl border border-edge bg-panel p-5 sm:p-6">
         <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
-          [ PLAN YOUR TRIP ]
+          PLAN YOUR TRIP
         </Mono>
         <div className="mt-4 grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
           <label className="block">
@@ -243,7 +243,7 @@ export default function Search() {
       <section className="space-y-4">
         <div className="flex items-center gap-3">
           <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
-            [ RESULTS ]
+            RESULTS
           </Mono>
           {results && (
             <span className="font-mono text-xs text-fog">
