@@ -84,7 +84,7 @@ export function ErrorBanner({ error, onRetry }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-alert/40 bg-alert/10 px-4 py-3">
       <div className="font-mono text-xs text-alert">
-        [!] {error?.message || 'Something went wrong'} — the API may be down.
+        ✗ {error?.message || 'Something went wrong'} — the API may be down.
       </div>
       <div className="flex gap-2">
         <button

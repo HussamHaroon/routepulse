@@ -310,7 +310,7 @@ export default function Driver() {
               : 'border-alert/40 bg-alert/10 text-alert'
           }`}
         >
-          {actionMsg.ok ? '✓ ' : '[!] '}
+          {actionMsg.ok ? '✓ ' : '✗ '}
           {actionMsg.text}
         </div>
       )}

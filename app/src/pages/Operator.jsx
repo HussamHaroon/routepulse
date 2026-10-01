@@ -129,7 +129,7 @@ export default function Operator() {
                 <option value="ALL">ALL ROUTES (network-wide)</option>
                 {ROUTES.map((r) => (
                   <option key={r.route_id} value={r.route_id}>
-                    [ {routeNumber(r)} ] {r.route_name}
+                    {routeNumber(r)} · {r.route_name}
                   </option>
                 ))}
               </select>
@@ -155,7 +155,7 @@ export default function Operator() {
                       : 'border-alert/40 bg-alert/10 text-alert'
                   }`}
                 >
-                  {pubMsg.ok ? '✓ ' : '[!] '}
+                  {pubMsg.ok ? '✓ ' : '✗ '}
                   {pubMsg.text}
                 </div>
               )}
