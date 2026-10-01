@@ -1,0 +1,22 @@
+{
+  "name": "Routepulse",
+  "short_name": "Routepulse",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#F4EFE4",
+  "background_color": "#211D16",
+  "icons": [
+    {
+      "src": "/logo-mark.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo-full.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

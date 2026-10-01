@@ -221,6 +221,78 @@ export default function Track() {
   const [voiceOn, setVoiceOn] = useState(true)
   const firedRef = useRef(false)
 
+  // ---- SHARE --------------------------------------------------------------
+  // Copies the live board URL — clipboard API first, execCommand fallback.
+  const [shareLabel, setShareLabel] = useState('SHARE')
+  const shareTimer = useRef(null)
+  const shareTrack = async () => {
+    const url = window.location.href
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url)
+      } else {
+        const ta = document.createElement('textarea')
+        ta.value = url
+        ta.setAttribute('readonly', '')
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      setShareLabel('LINK COPIED ✓')
+    } catch {
+      setShareLabel('COPY FAILED')
+    }
+    clearTimeout(shareTimer.current)
+    shareTimer.current = setTimeout(() => setShareLabel('SHARE'), 2000)
+  }
+
+  // ---- CHIME --------------------------------------------------------------
+  // Two-tone chime (880 → 1320 Hz) when the alarm fires, gated behind a
+  // SOUND ON/OFF toggle persisted in localStorage (default OFF). The
+  // Notification above always fires regardless of this setting.
+  const [soundOn, setSoundOn] = useState(() => {
+    try {
+      return window.localStorage.getItem('rp_sound') === 'on'
+    } catch {
+      return false
+    }
+  })
+  const toggleSound = () => {
+    const next = !soundOn
+    setSoundOn(next)
+    try {
+      window.localStorage.setItem('rp_sound', next ? 'on' : 'off')
+    } catch { /* storage unavailable — session-only toggle */ }
+  }
+  const playChime = () => {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext
+      if (!AC) return
+      const ac = new AC()
+      if (ac.state === 'suspended') ac.resume().catch(() => {})
+      const tone = (freq, at) => {
+        const t0 = ac.currentTime + at
+        const osc = ac.createOscillator()
+        const gain = ac.createGain()
+        osc.type = 'sine'
+        osc.frequency.setValueAtTime(freq, t0)
+        gain.gain.setValueAtTime(0, t0)
+        gain.gain.linearRampToValueAtTime(0.08, t0 + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.18)
+        osc.connect(gain)
+        gain.connect(ac.destination)
+        osc.start(t0)
+        osc.stop(t0 + 0.2)
+      }
+      tone(880, 0)
+      tone(1320, 0.18)
+      setTimeout(() => { try { ac.close() } catch { /* already closed */ } }, 700)
+    } catch { /* audio is optional — notification + banner still fire */ }
+  }
+
   const armAlarm = async () => {
     if (!alarmStop) return
     if (!('Notification' in window)) return setAlarmDenied(true)
@@ -249,6 +321,7 @@ export default function Track() {
           tag: 'routepulse-alarm',
         })
       } catch { /* some browsers require SW; banner already shows */ }
+      if (soundOn) playChime()
       if (voiceOn) {
         try {
           const u = new SpeechSynthesisUtterance(
@@ -259,7 +332,7 @@ export default function Track() {
         } catch { /* speech is optional — banner + notification still fire */ }
       }
     }
-  }, [alarmArmed, alarmStop, etas, route, now, voiceOn])
+  }, [alarmArmed, alarmStop, etas, route, now, voiceOn, soundOn])
 
   if (routeErr)
     return (
@@ -446,7 +519,27 @@ export default function Track() {
               </div>
             ) : (
               <>
-                <Mono className="block text-xs font-bold tracking-[0.25em] text-fog">BOARDING ALARM</Mono>
+                <div className="flex items-center justify-between gap-2">
+                  <Mono className="text-xs font-bold tracking-[0.25em] text-fog">BOARDING ALARM</Mono>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={shareTrack}
+                      title="Copy a link to this live board"
+                      className="min-h-9 rounded-md border border-edge bg-panel2 px-2.5 py-1 font-mono text-xs font-bold tracking-widest text-fog transition hover:text-snow"
+                    >
+                      {shareLabel}
+                    </button>
+                    <button
+                      onClick={toggleSound}
+                      title="Two-tone chime when the alarm fires — saved on this device"
+                      className={`min-h-9 rounded-md border px-2 py-1 font-mono text-xs font-bold tracking-widest transition ${
+                        soundOn ? 'border-live/60 bg-live/15 text-live' : 'border-edge bg-panel2 text-fog hover:text-snow'
+                      }`}
+                    >
+                      SOUND {soundOn ? 'ON' : 'OFF'}
+                    </button>
+                  </div>
+                </div>
                 <div className="mt-2 flex gap-2">
                   <select
                     value={alarmStop}

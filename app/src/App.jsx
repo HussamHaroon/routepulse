@@ -6,6 +6,7 @@ import Track from './pages/Track'
 import Driver from './pages/Driver'
 import Operator from './pages/Operator'
 import NotFound from './pages/NotFound'
+import Station from './pages/Station'
 
 // ---------- DEMO DATA toggle context (mock mode switch) ----------
 const DemoCtx = createContext({ demo: true, setDemo: () => {} })
@@ -157,6 +158,17 @@ export default function App() {
   }, [])
   const setDemo = setDemoState // session-only toggle (deliberately not persisted)
 
+  // PWA: register the service worker. Browsers only allow SW over http(s) —
+  // file:// and other schemes are skipped.
+  useEffect(() => {
+    if (!location.protocol.startsWith('http')) return
+    try {
+      navigator.serviceWorker?.register('/sw.js').catch(() => {})
+    } catch {
+      /* SW is a progressive enhancement — never blocks the app */
+    }
+  }, [])
+
   return (
     <DemoCtx.Provider value={{ demo, setDemo }}>
       <HashRouter>
@@ -184,6 +196,7 @@ function Shell() {
           <Route path="/" element={<Home />} />
           <Route path="/search" element={<Search />} />
           <Route path="/track/:routeId" element={<Track />} />
+          <Route path="/station/:stopName" element={<Station />} />
           <Route path="/driver" element={<Driver />} />
           <Route path="/operator" element={<Operator />} />
           <Route path="*" element={<NotFound />} />

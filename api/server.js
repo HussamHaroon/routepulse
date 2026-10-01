@@ -934,6 +934,76 @@ app.get('/api/conditions', async (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Station board — GET /api/stops/:name/departures
+// Every active bus whose route serves the named stop, ETAs computed the same
+// way as /api/routes/:id/etas (polyline projection + EMA speed + delay).
+// :name matches case/whitespace-insensitively; only the first matching
+// stop_name feeds the board so shared stop names across routes line up.
+// ---------------------------------------------------------------------------
+const flatName = (s) => norm(s).replace(/\s+/g, ' ');
+
+app.get('/api/stops/:name/departures', (req, res) => {
+  const fallback = { stop_name: req.params.name, departures: [] };
+  try {
+    const want = flatName(req.params.name);
+    if (!want) return res.json(fallback);
+
+    const names = db.prepare('SELECT DISTINCT stop_name FROM stop').all().map((r) => r.stop_name);
+    const match = names.find((n) => flatName(n) === want);
+    if (!match) return res.json(fallback); // unknown stop → empty board, not a 404
+
+    // Same-named stop on several routes (one row per route serves the board)
+    const stopsForName = db.prepare('SELECT * FROM stop WHERE stop_name = ?').all(match);
+    const routeById = new Map(); // per-request cache of route rows
+
+    const rows = [];
+    for (const [busId, trip] of tripByBus) {
+      try {
+        const stop = stopsForName.find((s) => String(s.route_id) === String(trip.route_id));
+        const pos = positions.get(busId);
+        if (!stop || !pos) continue; // route doesn't serve this stop / no live fix
+
+        const ctx = getRouteContext(trip.route_id);
+        const busProj = projectOntoPolyline(Number(pos.lat), Number(pos.lng), ctx.poly);
+        const stopProj = projectOntoPolyline(stop.lat, stop.lng, ctx.poly);
+        // Loop-aware remaining km: already-passed stops get their next-pass ETA
+        let ahead = stopProj.distAlong - busProj.distAlong;
+        if (ahead < 0) ahead += ctx.poly.total;
+        const remainingKm = Math.max(0, ahead);
+
+        const speed = Math.max(currentSpeedKmh(trip.route_id), 5);
+        const delay = trip.delay_minutes || 0;
+        const ageSec = (Date.now() - new Date(pos.updated_at).getTime()) / 1000;
+
+        if (!routeById.has(trip.route_id)) {
+          routeById.set(trip.route_id, db.prepare('SELECT route_name, destination FROM route WHERE route_id = ?').get(trip.route_id));
+        }
+        const route = routeById.get(trip.route_id);
+
+        rows.push({
+          route_id: trip.route_id,
+          route_name: route?.route_name ?? null,
+          headsign: route?.destination ?? route?.route_name ?? null,
+          eta_min: round1((remainingKm / speed) * 60 + delay),
+          confidence: etaConfidence(trip.route_id, busProj.offsetKm, ageSec),
+          delay_minutes: delay,
+          bus_id: busId,
+          trip_status: trip.trip_status,
+        });
+      } catch (e) {
+        console.error(`[api] departures row ${busId}:`, e.message); // one bad bus never kills the board
+      }
+    }
+
+    rows.sort((a, b) => a.eta_min - b.eta_min);
+    return res.json({ stop_name: match, departures: rows.slice(0, 12) });
+  } catch (e) {
+    console.error('[api] departures:', e.message);
+    return res.json(fallback); // never crash: empty board beats a 500
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Health + fallthrough
 // ---------------------------------------------------------------------------
 app.get('/api/health', (_req, res) => res.json({ ok: true }));

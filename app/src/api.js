@@ -202,3 +202,36 @@ export const getCrowd = (routeId, mock) =>
   mock
     ? Promise.resolve({ level: null, updated_at: null })
     : j(`/api/routes/${encodeURIComponent(routeId)}/crowd`)
+
+// ---- station board (GET /api/stops/:name/departures) ----
+// One stop, every bus that passes it. Mock rows are built from the demo
+// ROUTES + the client-side bus simulator so the static demo works.
+export const getDepartures = (stopName, mock) => {
+  if (mock) {
+    return mockP(() => {
+      const want = String(stopName ?? '').trim().toLowerCase()
+      const locs = m.mockLocations()
+      const rows = []
+      for (const r of m.ROUTES) {
+        const stop = r.stops.find((s) => String(s.stop_name).trim().toLowerCase() === want)
+        if (!stop) continue
+        const bus = locs.find((b) => b.route_id === r.route_id && b.trip_status !== 'Offline')
+        const eta = (m.mockEtas(r.route_id).etas ?? []).find((e) => e.stop_id === stop.stop_id)
+        const etaMin = eta?.eta_min ?? m.mockNextBusMinutes(r.route_id, stop.stop_name) ?? 9
+        rows.push({
+          route_id: r.route_id,
+          route_name: r.route_name,
+          headsign: r.destination,
+          eta_min: Math.max(0, Math.round(Number(etaMin) * 10) / 10),
+          confidence: eta?.confidence ?? 'medium',
+          delay_minutes: bus?.delay_minutes ?? 0,
+          bus_id: bus?.bus_id ?? '—',
+          trip_status: bus?.trip_status ?? 'On Route',
+        })
+      }
+      rows.sort((a, b) => a.eta_min - b.eta_min)
+      return { stop_name: stopName, departures: rows.slice(0, 12) }
+    })
+  }
+  return j(`/api/stops/${encodeURIComponent(stopName)}/departures`)
+}
