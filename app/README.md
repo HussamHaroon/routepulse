@@ -1,16 +1,32 @@
-# React + Vite
+# Routepulse — frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Live public-transport tracking UI: passenger route search, real-time bus map,
+per-stop ETAs with confidence, driver trip console, operator dashboard.
 
-Currently, two official plugins are available:
+## Run
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev      # http://localhost:5173
+```
 
-## React Compiler
+## Modes
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **DEMO DATA ON (default):** the app runs fully from `src/mock.js` — seed data +
+  a client-side bus simulator — no backend needed.
+- **DEMO DATA OFF:** talks to the real API. Vite proxies `/api` →
+  `http://localhost:8787` (see `vite.config.js`), live updates arrive over
+  `ws://localhost:8787` with automatic 3s-polling fallback.
 
-## Expanding the Oxlint configuration
+## Screens
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+| Route | Screen |
+| --- | --- |
+| `/` | Passenger search — origin/destination selects, direct + transfer results |
+| `/track/:routeId` | Live tracking — map, moving bus, ticking stop ETAs, service alerts |
+| `/driver` | Driver console — start trip, status updates, phone-GPS source |
+| `/operator` | Operator dashboard — KPIs, fleet map, live table, alert publishing |
+
+Stack: Vite + React (JS) · Tailwind v4 · react-leaflet · Esri dark basemap tiles
+(no API key). ETA confidence (`high|medium|low` + `eta_range_min`) comes from the
+API when present; the UI degrades to "ESTIMATING…" on low confidence.
