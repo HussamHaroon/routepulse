@@ -170,7 +170,7 @@ export default function Driver() {
 
       {!trip ? (
         /* ---------- start trip panel ---------- */
-        <section className="max-w-2xl rounded-2xl border border-edge bg-panel p-5 sm:p-6">
+        <section className="w-full rounded-2xl border border-edge bg-panel p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <label className="block">
               <span className="mb-1.5 block font-mono text-xs uppercase tracking-[0.2em] text-fog">
@@ -247,7 +247,7 @@ export default function Driver() {
         </section>
       ) : (
         /* ---------- active trip panel ---------- */
-        <section className="max-w-3xl space-y-4">
+        <section className="w-full space-y-4">
           <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-phos/40 bg-phos/5 p-5">
             <div>
               <Mono className="text-xs tracking-[0.3em] text-phos">
@@ -335,7 +335,7 @@ export default function Driver() {
 
       {actionMsg && (
         <div
-          className={`max-w-3xl rounded-lg border px-4 py-2.5 font-mono text-xs font-bold ${
+          className={`w-full rounded-lg border px-4 py-2.5 font-mono text-xs font-bold ${
             actionMsg.ok
               ? 'border-phos/40 bg-phos/10 text-phos'
               : 'border-alert/40 bg-alert/10 text-alert'
@@ -370,7 +370,7 @@ function RouteMiniMap({ routeId, demo }) {
       polylines={[{ coords: route.stops.map((s) => [s.lat, s.lng]), opacity: 0.5 }]}
       stops={route.stops}
       fitKey={route.route_id + String(demo)}
-      className="h-64 max-w-3xl opacity-80"
+      className="h-72 w-full opacity-80"
     />
   )
 }
