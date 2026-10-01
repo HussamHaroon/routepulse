@@ -3,8 +3,6 @@ import { Link } from 'react-router-dom'
 import { getStats } from '../api'
 
 // Pexels hotlinks — free license, credited in the footer below.
-const VIDEO_URL =
-  'https://videos.pexels.com/video-files/38876115/16528969_640_360_24fps.mp4'
 const VIDEO_POSTER =
   'https://images.pexels.com/photos/4774659/pexels-photo-4774659.jpeg?auto=compress&cs=tinysrgb&h=650&w=940'
 
@@ -92,29 +90,34 @@ function DestinationRoll() {
 }
 
 // ---------------------------------------------------------------
-// Video-on-scroll: sticky full-viewport video scrubbed by scroll
-// progress (rAF-throttled, footage in the paper register via warm
-// filter). Overlay steps fade via a CSS var — no re-renders.
+// Video-on-scroll — hybrid pattern: the clip plays (muted, loop)
+// while the section is in the viewport; scroll drives the progress
+// bar and the overlay copy steps (CSS var, no re-renders). This
+// always shows moving footage — CDN seek-scrubbing stuttered.
 // ---------------------------------------------------------------
 function VideoScrub() {
   const sectionRef = useRef(null)
   const videoRef = useRef(null)
-  const durationRef = useRef(23)
-  const lastTRef = useRef(-1)
   const rafRef = useRef(0)
 
   useEffect(() => {
     const section = sectionRef.current
     const video = videoRef.current
     if (!section || !video) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    const onMeta = () => {
-      if (Number.isFinite(video.duration) && video.duration > 0) {
-        durationRef.current = video.duration
-      }
+    // play on enter, pause on exit (skipped under reduced motion)
+    let io
+    if (!reduced) {
+      io = new IntersectionObserver(
+        ([e]) => {
+          if (e.isIntersecting) video.play().catch(() => {})
+          else video.pause()
+        },
+        { threshold: 0.25 }
+      )
+      io.observe(section)
     }
-    video.addEventListener('loadedmetadata', onMeta)
 
     const apply = () => {
       rafRef.current = 0
@@ -122,15 +125,6 @@ function VideoScrub() {
       if (total <= 0) return
       const progress = Math.min(1, Math.max(0, -section.getBoundingClientRect().top / total))
       section.style.setProperty('--p', progress.toFixed(4))
-      const t = progress * durationRef.current
-      if (Math.abs(t - lastTRef.current) > 0.08) {
-        lastTRef.current = t
-        try {
-          video.currentTime = t
-        } catch {
-          /* metadata not ready yet */
-        }
-      }
     }
     const onScroll = () => {
       if (!rafRef.current) rafRef.current = requestAnimationFrame(apply)
@@ -141,7 +135,8 @@ function VideoScrub() {
     return () => {
       window.removeEventListener('scroll', onScroll)
       window.removeEventListener('resize', onScroll)
-      video.removeEventListener('loadedmetadata', onMeta)
+      if (io) io.disconnect()
+      video.pause()
       if (rafRef.current) cancelAnimationFrame(rafRef.current)
     }
   }, [])
@@ -151,13 +146,22 @@ function VideoScrub() {
       <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden bg-paper-deep">
         <video
           ref={videoRef}
-          className="rp-warm absolute inset-0 h-full w-full scale-105 object-cover"
-          src={VIDEO_URL}
+          className="rp-warm absolute inset-0 h-full w-full object-cover"
           poster={VIDEO_POSTER}
           muted
+          loop
           playsInline
-          preload="auto"
-        />
+          preload="metadata"
+        >
+          <source
+            src="https://videos.pexels.com/video-files/38876115/16528969_640_360_24fps.mp4"
+            type="video/mp4"
+          />
+          <source
+            src="https://videos.pexels.com/video-files/2282019/2282019-sd_426_240_24fps.mp4"
+            type="video/mp4"
+          />
+        </video>
         <div className="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink" />
 
         {STEPS.map((s) => (
