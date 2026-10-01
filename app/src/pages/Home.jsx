@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import VideoScrollSection from '../components/VideoScrollSection.jsx';
 import { Link } from 'react-router-dom'
 import { getStats } from '../api'
 
 // Pexels hotlinks — free license, credited in the footer below.
-const VIDEO_POSTER =
-  'https://images.pexels.com/photos/4774659/pexels-photo-4774659.jpeg?auto=compress&cs=tinysrgb&h=650&w=940'
 
 const FEATURES = [
   {
@@ -95,144 +94,6 @@ function DestinationRoll() {
 // bar and the overlay copy steps (CSS var, no re-renders). This
 // always shows moving footage — CDN seek-scrubbing stuttered.
 // ---------------------------------------------------------------
-function VideoScrub() {
-  const sectionRef = useRef(null)
-  const videoRef = useRef(null)
-  const rafRef = useRef(0)
-  // touch devices: skip the 350vh scroll-scrub (janks on mobile) — the clip
-  // just plays while in view inside a single 100svh frame
-  const [coarse, setCoarse] = useState(false)
-  useEffect(() => {
-    setCoarse(window.matchMedia('(pointer: coarse)').matches)
-  }, [])
-
-  useEffect(() => {
-    const section = sectionRef.current
-    const video = videoRef.current
-    if (!section || !video) return
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    let inView = false
-
-    // self-healing playback: (re)attempt whenever the clip gains data
-    const syncPlay = () => {
-      if (reduced || !inView) {
-        video.pause()
-        return
-      }
-      video.play().catch(() => {})
-    }
-    const onData = () => syncPlay()
-    video.addEventListener('canplay', onData)
-    video.addEventListener('loadeddata', onData)
-
-    // play on enter, pause on exit
-    let io
-    if (!reduced) {
-      io = new IntersectionObserver(
-        ([e]) => {
-          inView = e.isIntersecting
-          syncPlay()
-        },
-        { threshold: 0.25 }
-      )
-      io.observe(section)
-    }
-
-    const apply = () => {
-      rafRef.current = 0
-      const total = section.offsetHeight - window.innerHeight
-      if (total <= 0) return
-      const progress = Math.min(1, Math.max(0, -section.getBoundingClientRect().top / total))
-      section.style.setProperty('--p', progress.toFixed(4))
-    }
-    const onScroll = () => {
-      if (!rafRef.current) rafRef.current = requestAnimationFrame(apply)
-    }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll, { passive: true })
-    apply()
-    return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
-      video.removeEventListener('canplay', onData)
-      video.removeEventListener('loadeddata', onData)
-      if (io) io.disconnect()
-      video.pause()
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-    }
-  }, [])
-
-  return (
-    <section
-      ref={sectionRef}
-      style={{ '--p': 0 }}
-      className={coarse ? 'relative rp-fullh' : 'relative h-[350vh]'}
-    >
-      <div className="rp-fullh sticky top-0 flex items-center justify-center overflow-hidden bg-paper-deep">
-        <video
-          ref={videoRef}
-          className="rp-warm absolute inset-0 h-full w-full object-cover"
-          poster={VIDEO_POSTER}
-          muted
-          loop
-          playsInline
-          preload="metadata"
-        >
-          <source
-            src="https://videos.pexels.com/video-files/38876115/16528969_640_360_24fps.mp4"
-            type="video/mp4"
-          />
-          <source
-            src="https://videos.pexels.com/video-files/2282019/2282019-sd_426_240_24fps.mp4"
-            type="video/mp4"
-          />
-        </video>
-        <div className="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink" />
-        {/* readability scrim so overlay copy survives any footage */}
-        <div className="absolute inset-0 bg-night/35" />
-
-        {coarse ? (
-          /* touch: no scrub — show the three beats as a stacked caption block */
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-night/85 via-night/45 to-transparent px-6 pb-14 pt-12 text-center">
-            {STEPS.map((s) => (
-              <h3
-                key={s.label}
-                className="font-display text-2xl font-semibold uppercase tracking-tight text-paper drop-shadow-[0_1px_10px_rgba(18,20,23,0.8)] sm:text-3xl"
-              >
-                {s.label.split(' ')[0]}{' '}
-                <em className="text-signal">{s.label.split(' ').slice(1).join(' ')}</em>
-              </h3>
-            ))}
-          </div>
-        ) : (
-          STEPS.map((s) => (
-            <div
-              key={s.label}
-              className="absolute inset-0 flex items-center justify-center px-6"
-              style={{
-                opacity: `calc(clamp(0, (var(--p) - ${s.a}) / 0.08, 1) * clamp(0, (${s.b} - var(--p)) / 0.08, 1))`,
-              }}
-            >
-              <h3 className="text-center font-display text-4xl font-semibold uppercase tracking-tight text-paper drop-shadow-[0_1px_14px_rgba(18,20,23,0.75)] sm:text-6xl">
-                {s.label.split(' ')[0]}{' '}
-                <em className="text-signal">{s.label.split(' ').slice(1).join(' ')}</em>
-              </h3>
-            </div>
-          ))
-        )}
-
-        {!coarse && (
-          <div className="absolute bottom-8 left-1/2 h-px w-56 -translate-x-1/2 bg-paper/40">
-            <div
-              className="h-full bg-signal"
-              style={{ width: 'calc(var(--p) * 100%)' }}
-            />
-          </div>
-        )}
-      </div>
-    </section>
-  )
-}
 
 // ---------------------------------------------------------------
 // Live stats strip — real /api/stats numbers, DEMO DATA fallback.
@@ -353,7 +214,7 @@ export default function Home() {
       </section>
 
       {/* ---------- VIDEO ON SCROLL ---------- */}
-      <VideoScrub />
+      <VideoScrollSection />
 
       {/* ---------- FEATURE CARDS — printed timetable panels ---------- */}
       <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
