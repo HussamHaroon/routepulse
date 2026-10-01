@@ -168,7 +168,8 @@ export default function Operator() {
   const s = stats.data
 
   return (
-    <div className="night -mx-4 -my-6 space-y-6 px-4 py-6 sm:-mx-6 sm:px-6">
+    <div className="night min-h-full">
+      <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6">
       {/* header */}
       <div className="flex flex-wrap items-center gap-3">
         <div>
@@ -615,6 +616,7 @@ export default function Operator() {
               {k}
             </span>
           ))}
+      </div>
       </div>
     </div>
   )

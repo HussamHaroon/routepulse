@@ -183,13 +183,16 @@ export default function App() {
 function Shell() {
   const { pathname } = useLocation()
   const home = pathname === '/'
+  const operator = pathname === '/operator'
 
   return (
     <div className="flex min-h-screen flex-col bg-ink text-snow">
       <Header />
       <main
         className={
-          home ? 'w-full flex-1' : 'mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6'
+          home || operator
+            ? 'w-full flex-1'
+            : 'mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6'
         }
       >
         <Routes>
