@@ -1,12 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   getAlerts,
+  getBunching,
   getDelayPatterns,
   getDrivers,
   getConditions,
   getEtaAccuracy,
   getNetwork,
+  getReplay,
   getStats,
   publishAlert,
 } from '../api'
@@ -51,8 +53,59 @@ export default function Operator() {
   const rhythm = usePoll(() => getDelayPatterns(demo), 60000, [demo])
   const accuracy = usePoll(() => getEtaAccuracy(demo), 60000, [demo])
   const conditions = usePoll(() => getConditions(demo), 600000, [demo])
+  const bunching = usePoll(() => getBunching(demo), 6000, [demo])
   const ROUTE_SET = net.data?.routes?.length ? net.data.routes : ROUTES
   const { smooth, trails } = useSmoothedLocations(locations)
+
+  // ---- TIME TRAVEL: fetch + play back the fleet's recent past -------------
+  const [replay, setReplay] = useState(null) // { frames, step_s, recorded_minutes }
+  const [replayIdx, setReplayIdx] = useState(0)
+  const [replayPlaying, setReplayPlaying] = useState(false)
+  const [replayLoading, setReplayLoading] = useState(false)
+  const replayRef = useRef(null)
+
+  const loadReplay = async () => {
+    setReplayLoading(true)
+    try {
+      const data = await getReplay(60)
+      setReplay(data)
+      setReplayIdx(Math.max(0, data.frames.length - 1))
+      setReplayPlaying(true)
+    } catch {
+      setReplay({ frames: [], step_s: 10, recorded_minutes: 0 })
+    } finally {
+      setReplayLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!replayPlaying || !replay?.frames?.length) return
+    replayRef.current = setInterval(() => {
+      setReplayIdx((i) => {
+        if (i + 1 >= replay.frames.length) {
+          setReplayPlaying(false)
+          return i
+        }
+        return i + 1
+      })
+    }, 240) // ~40× faster than wall clock at 10s steps
+    return () => clearInterval(replayRef.current)
+  }, [replayPlaying, replay])
+
+  const replayFrame = replay?.frames?.[replayIdx]
+  const replayBuses = replayFrame
+    ? replayFrame.buses.map((b) => ({
+        bus_id: b.bus_id,
+        route_id: b.route_id,
+        lat: b.lat,
+        lng: b.lng,
+        speed: b.speed,
+        delay_minutes: b.delay_minutes,
+        trip_status: b.trip_status,
+        next_stop: null,
+      }))
+    : []
+  const replayAt = replayFrame ? new Date(replayFrame.at).toLocaleTimeString() : null
 
   // Delay heat: any route whose worst bus runs ≥5 min late glows on the map.
   const hotRoutes = useMemo(() => {
@@ -163,6 +216,80 @@ export default function Operator() {
           fitKey={`fleet-${demo}-${ROUTE_SET.map((r) => r.route_id).join('_')}`}
           className="rp-map45"
         />
+
+        {/* ---- TIME TRAVEL ---- */}
+        <section className="rounded-xl border border-edge bg-panel">
+          <div className="flex flex-wrap items-center gap-3 border-b border-edge px-4 py-3">
+            <Mono className="text-xs font-bold tracking-[0.3em] text-fog">TIME TRAVEL</Mono>
+            <Mono className="text-[10px] text-fog">REPLAY THE NETWORK'S RECENT PAST</Mono>
+            <div className="ml-auto flex items-center gap-2">
+              {!replay ? (
+                <button
+                  onClick={loadReplay}
+                  disabled={replayLoading}
+                  className="min-h-9 rounded-md border border-edge bg-panel2 px-3 font-mono text-xs font-bold tracking-widest text-fog transition hover:text-snow disabled:opacity-40"
+                >
+                  {replayLoading ? 'FETCHING FOOTAGE…' : '▶ REPLAY LAST 60 MIN'}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => setReplayPlaying((v) => !v)}
+                    disabled={!replay?.frames?.length}
+                    className="min-h-9 rounded-md border border-phos/50 bg-phos/10 px-3 font-mono text-xs font-bold tracking-widest text-phos disabled:opacity-40"
+                  >
+                    {replayPlaying ? '❚❚ PAUSE' : '▶ PLAY'}
+                  </button>
+                  <button
+                    onClick={() => { setReplay(null); setReplayPlaying(false) }}
+                    className="min-h-9 rounded-md border border-edge bg-panel2 px-3 font-mono text-xs font-bold tracking-widest text-fog hover:text-snow"
+                  >
+                    EXIT
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          {replay && (
+            <div className="px-4 py-3">
+              {replay.frames?.length < 2 ? (
+                <Mono className="text-xs text-fog">
+                  COLLECTING FOOTAGE — THE BUFFER HAS ONLY {replay.frames?.length ?? 0} SNAPSHOT(S).
+                  THE SERVER RECORDS EVERY 10s; COME BACK IN A MINUTE.
+                </Mono>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={0}
+                      max={replay.frames.length - 1}
+                      value={replayIdx}
+                      onChange={(e) => { setReplayPlaying(false); setReplayIdx(Number(e.target.value)) }}
+                      className="h-1.5 w-full accent-[#4C9E6D]"
+                    />
+                    <Mono className="w-40 shrink-0 text-right text-xs text-fog">
+                      {replayAt} · T−{Math.max(0, Math.round(((replay.frames[replay.frames.length - 1].at - replayFrame.at) / 60000) * 10) / 10)}m
+                    </Mono>
+                  </div>
+                  <div className="mt-3">
+                    <MapView
+                      night
+                      polylines={allCoords}
+                      buses={replayBuses}
+                      fitKey={`replay-${replayIdx === replay.frames.length - 1}`}
+                      className="h-[300px]"
+                    />
+                  </div>
+                  <Mono className="mt-2 block text-[10px] text-fog">
+                    FRAME {replayIdx + 1}/{replay.frames.length} · RECORDED {replay.recorded_minutes} MIN ·
+                    WATCH B-14's DELAY BLOOM AND THE LOOP WRAP AROUND MIDNIGHT BUS STOPS
+                  </Mono>
+                </>
+              )}
+            </div>
+          )}
+        </section>
 
         <aside className="space-y-4">
           {/* publisher */}
@@ -350,6 +477,47 @@ export default function Operator() {
                   </div>
                 )}
               </div>
+            ) : (
+              <Skeleton className="mt-3 h-16 w-full" />
+            )}
+          </div>
+
+          <div className="rounded-xl border border-edge bg-panel p-5">
+            <div className="flex items-center justify-between">
+              <Mono className="text-xs font-bold tracking-[0.3em] text-fog">BUNCHING RADAR</Mono>
+              <Mono className="text-[10px] text-fog">PAIRS &lt; {bunching.data?.threshold_m ?? 400} M</Mono>
+            </div>
+            {bunching.data ? (
+              bunching.data.pairs.length ? (
+                <div className="mt-3 space-y-2">
+                  {bunching.data.pairs.map((p, i) => (
+                    <div key={i} className="rounded-lg border border-amber/40 bg-amber/5 px-3 py-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <Mono className="text-xs font-bold text-amber">
+                          {p.bus_a} + {p.bus_b}
+                        </Mono>
+                        <Mono className="text-xs text-fog">{p.gap_m} M APART</Mono>
+                      </div>
+                      <Mono className="mt-0.5 block text-[10px] leading-snug text-fog">
+                        ROUTE {String(p.route_id).replace('R', '')} · {p.avg_speed_kmh} KM/H TOGETHER —
+                        HOLD {p.bus_b} AT ITS NEXT STOP ~2 MIN TO RE-SPREAD THE LINE
+                      </Mono>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-3">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-phos">SPREAD</span>
+                    <Mono className="text-xs text-fog">
+                      {bunching.data.buses_scanned} BUSES · {bunching.data.routes_scanned} ROUTES
+                    </Mono>
+                  </div>
+                  <div className="font-mono text-xs leading-snug text-fog">
+                    no same-route pairs within {bunching.data.threshold_m} m — headways healthy
+                  </div>
+                </div>
+              )
             ) : (
               <Skeleton className="mt-3 h-16 w-full" />
             )}

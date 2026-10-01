@@ -14,6 +14,7 @@ import {
   buildPolyline,
   projectOntoPolyline,
   pointAtDistance,
+  haversineKm,
 } from './geo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1001,6 +1002,105 @@ app.get('/api/stops/:name/departures', (req, res) => {
     console.error('[api] departures:', e.message);
     return res.json(fallback); // never crash: empty board beats a 500
   }
+});
+
+// ---------------------------------------------------------------------------
+// WP5: bunching radar — the classic transit-ops failure where two buses on
+// the same route pair up and travel as one. Detected live from positions;
+// the fix (hold the follower at its next stop) is what real agencies do.
+// ---------------------------------------------------------------------------
+const BUNCHING_THRESHOLD_KM = 0.4;
+
+app.get('/api/analytics/bunching', (_req, res) => {
+  try {
+    const byRoute = new Map();
+    for (const [busId, pos] of positions) {
+      const trip = tripByBus.get(busId);
+      if (!trip || pos.lat == null) continue;
+      if (!byRoute.has(trip.route_id)) byRoute.set(trip.route_id, []);
+      byRoute.get(trip.route_id).push({
+        bus_id: busId,
+        lat: pos.lat,
+        lng: pos.lng,
+        speed: pos.speed ?? 0,
+        next_stop: null,
+      });
+    }
+    const pairs = [];
+    for (const [route_id, buses] of byRoute) {
+      for (let i = 0; i < buses.length; i++) {
+        for (let j = i + 1; j < buses.length; j++) {
+          const a = buses[i];
+          const b = buses[j];
+          const gapKm = haversineKm(a.lat, a.lng, b.lat, b.lng);
+          if (gapKm <= BUNCHING_THRESHOLD_KM) {
+            pairs.push({
+              route_id,
+              bus_a: a.bus_id,
+              bus_b: b.bus_id,
+              gap_m: Math.round(gapKm * 1000),
+              avg_speed_kmh: Math.round((a.speed + b.speed) / 2),
+            });
+          }
+        }
+      }
+    }
+    pairs.sort((x, y) => x.gap_m - y.gap_m);
+    res.json({
+      threshold_m: BUNCHING_THRESHOLD_KM * 1000,
+      routes_scanned: byRoute.size,
+      buses_scanned: positions.size,
+      pairs: pairs.slice(0, 8),
+    });
+  } catch (e) {
+    res.status(500).json({ error: 'bunching scan failed', detail: e.message });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// WP6: time travel — the server keeps a 2-hour ring buffer of fleet
+// snapshots (every 10s). /api/replay returns the window so the operator can
+// scrub the network's recent past: watch delays bloom and buses loop.
+// ---------------------------------------------------------------------------
+const REPLAY_STEP_MS = 10000;
+const REPLAY_WINDOW_MS = 2 * 60 * 60 * 1000;
+const replayBuffer = [];
+
+function snapshotReplay() {
+  if (!positions.size) return;
+  replayBuffer.push({
+    at: Date.now(),
+    buses: [...positions.entries()].map(([bus_id, p]) => {
+      const trip = tripByBus.get(bus_id);
+      return {
+        bus_id,
+        route_id: p.route_id,
+        lat: p.lat != null ? +p.lat.toFixed(5) : null,
+        lng: p.lng != null ? +p.lng.toFixed(5) : null,
+        speed: p.speed ?? null,
+        delay_minutes: trip?.delay_minutes ?? 0,
+        trip_status: trip?.trip_status ?? 'Unknown',
+      };
+    }),
+  });
+  while (replayBuffer.length && replayBuffer[0].at < Date.now() - REPLAY_WINDOW_MS) {
+    replayBuffer.shift();
+  }
+}
+setInterval(snapshotReplay, REPLAY_STEP_MS).unref();
+
+app.get('/api/replay', (req, res) => {
+  const minutes = Math.min(Math.max(Number(req.query.minutes) || 60, 5), 120);
+  const cutoff = Date.now() - minutes * 60000;
+  const frames = replayBuffer.filter((f) => f.at >= cutoff);
+  const step_s =
+    frames.length > 1 ? Math.max(Math.round((frames[1].at - frames[0].at) / 1000), 1) : REPLAY_STEP_MS / 1000;
+  res.json({
+    step_s,
+    window_minutes: minutes,
+    recorded_minutes: frames.length ? Math.round(((frames[frames.length - 1].at - frames[0].at) / 60000) * 10) / 10 : 0,
+    frames,
+  });
 });
 
 // ---------------------------------------------------------------------------

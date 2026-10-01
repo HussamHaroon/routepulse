@@ -137,6 +137,15 @@ export const getEtaAccuracy = (mock) =>
 export const getConditions = (mock) =>
   mock ? Promise.resolve(null) : j('/api/conditions')
 
+// Bunching radar — same-route pairs operating <400 m apart.
+export const getBunching = (mock) =>
+  mock
+    ? Promise.resolve({ threshold_m: 400, routes_scanned: 8, buses_scanned: 22, pairs: [] })
+    : j('/api/analytics/bunching')
+
+// Time travel — fleet snapshots for the operator replay slider.
+export const getReplay = (minutes = 60) => j(`/api/replay?minutes=${minutes}`)
+
 export const getStats = (mock) =>
   mock ? Promise.resolve(m.mockStats()) : j('/api/stats')
 
