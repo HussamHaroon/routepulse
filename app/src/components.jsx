@@ -10,6 +10,9 @@ import {
   Tooltip,
   useMap,
 } from 'react-leaflet'
+
+// CARTO Basemaps key (client-side by design — restrict by referrer in the CARTO dashboard).
+const CARTO_KEY = import.meta.env.VITE_CARTO_KEY || 'cb1_45y6_1_736945477684ff5c74ac6971'
 import { routeNumber } from './mock'
 
 // ---------- tiny text atoms ----------
@@ -144,7 +147,8 @@ function FitBounds({ fitKey }) {
 }
 
 /**
- * MapView — dark Esri basemap, route polylines, stop markers, pulsing bus dots.
+ * MapView — CARTO basemap (Dark Matter at night, Positron by day, sepia-tinted),
+ * route polylines, stop markers, pulsing bus dots.
  * polylines: [{ coords: [[lat,lng]...], color?, weight? }]
  * stops:     [{ lat, lng, stop_name, stop_order }]
  * buses:     [{ bus_id, lat, lng, speed, delay_minutes, trip_status, next_stop }]
@@ -160,13 +164,13 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
         preferCanvas
       >
         <TileLayer
-          attribution='Tiles &copy; Esri &mdash; data &copy; OpenStreetMap contributors'
+          attribution='&copy; OpenStreetMap contributors &copy; CARTO'
           url={
             night
-              ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
-              : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+              ? `https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`
+              : `https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`
           }
-          maxZoom={16}
+          maxZoom={18}
         />
         {polylines.map((p, i) => (
           <Polyline

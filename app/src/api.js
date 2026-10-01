@@ -93,6 +93,10 @@ export const searchRoutes = (from, to, mock) =>
 export const getRoute = (id, mock) =>
   mock ? Promise.resolve(m.mockRouteById(id)) : j(`/api/routes/${encodeURIComponent(id)}`)
 
+// Whole network in one call (stops included) — operator map + driver selects.
+export const getNetwork = (mock) =>
+  mock ? Promise.resolve({ routes: m.ROUTES }) : j('/api/routes?with_stops=1')
+
 export const getEtas = (id, mock, busId) =>
   mock
     ? Promise.resolve(m.mockEtas(id))

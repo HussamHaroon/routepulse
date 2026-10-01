@@ -22,19 +22,23 @@ function Header() {
   const { demo, setDemo } = useDemo()
   const { pathname } = useLocation()
   return (
-    <header className="sticky top-0 z-[1000] border-b border-edge bg-ink/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
-        <NavLink to="/" className="flex items-center gap-2.5">
-          <span className="relative flex h-3.5 w-3.5">
+    <header
+      className="sticky top-0 z-[1000] border-b border-edge bg-ink/90 backdrop-blur"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
+      {/* row 1 — brand + (desktop) links + feed toggle */}
+      <div className="mx-auto flex max-w-7xl items-center gap-x-6 px-4 py-2 sm:px-6">
+        <NavLink to="/" className="flex min-w-0 items-center gap-2.5">
+          <span className="relative flex h-3.5 w-3.5 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-phos opacity-60" />
             <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-phos" />
           </span>
-          <span className="font-mono text-lg font-extrabold tracking-[0.18em] text-snow">
+          <span className="whitespace-nowrap font-mono text-base font-extrabold tracking-[0.12em] text-snow sm:text-lg sm:tracking-[0.18em]">
             ROUTE<span className="text-phos">PULSE</span>
           </span>
         </NavLink>
 
-        <nav className="flex items-center gap-1">
+        <nav className="hidden items-center gap-1 md:flex">
           {navItems.map((n) => {
             const active =
               n.to === '/'
@@ -45,7 +49,7 @@ function Header() {
               <NavLink
                 key={n.to}
                 to={n.to}
-                className={`rounded-md px-3 py-1.5 font-mono text-xs font-bold tracking-widest transition ${
+                className={`flex min-h-11 items-center rounded-md px-3 py-1.5 font-mono text-xs font-bold tracking-widest transition ${
                   active
                     ? 'bg-phos/15 text-phos'
                     : 'text-fog hover:bg-panel2 hover:text-snow'
@@ -57,11 +61,11 @@ function Header() {
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center">
           <button
             onClick={() => setDemo(!demo)}
             title={demo ? 'Watching the offline demo simulator — click to go live' : 'Watching the live GPS feed — click to switch to the offline demo simulator'}
-            className={`flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest transition ${
+            className={`flex min-h-11 items-center gap-2 rounded-full border px-2.5 font-mono text-xs font-bold tracking-widest transition sm:px-3 ${
               demo
                 ? 'border-amber/50 bg-amber/10 text-amber'
                 : 'border-live/50 bg-live/10 text-live'
@@ -70,20 +74,51 @@ function Header() {
             <span
               className={`h-2 w-2 rounded-full rp-blink ${demo ? 'bg-amber' : 'bg-live'}`}
             />
-            {demo ? 'DEMO DATA' : 'LIVE FEED'}
+            <span className="hidden sm:inline">{demo ? 'DEMO DATA' : 'LIVE FEED'}</span>
+            <span className="sm:hidden">{demo ? 'DEMO' : 'LIVE'}</span>
           </button>
         </div>
       </div>
+
+      {/* row 2 (touch only) — horizontally scrollable link rail, snap + fade edge */}
+      <nav
+        aria-label="Primary"
+        className="no-scrollbar rp-rail flex snap-x snap-mandatory gap-1 overflow-x-auto border-t border-edge/60 px-4 py-1 md:hidden"
+      >
+        {navItems.map((n) => {
+          const active =
+            n.to === '/'
+              ? pathname === '/'
+              : pathname.startsWith(n.to) ||
+                (n.to === '/search' && pathname.startsWith('/track'))
+          return (
+            <NavLink
+              key={n.to}
+              to={n.to}
+              className={`flex min-h-11 shrink-0 snap-start items-center rounded-md px-3.5 py-2 font-mono text-xs font-bold tracking-widest transition ${
+                active
+                  ? 'bg-phos/15 text-phos'
+                  : 'text-fog hover:bg-panel2 hover:text-snow'
+              }`}
+            >
+              {n.label}
+            </NavLink>
+          )
+        })}
+      </nav>
     </header>
   )
 }
 
 function Footer() {
   return (
-    <footer className="border-t border-edge py-6">
-      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 font-mono text-[10px] uppercase tracking-[0.2em] text-fog sm:px-6">
+    <footer
+      className="border-t border-edge py-6"
+      style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}
+    >
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 font-mono text-xs uppercase tracking-[0.2em] text-fog sm:px-6">
         <span>routepulse · live transit tracking · hackathon build</span>
-        <span>map tiles © esri · map data © openstreetmap contributors</span>
+        <span>map tiles © carto · map data © openstreetmap contributors</span>
       </div>
     </footer>
   )

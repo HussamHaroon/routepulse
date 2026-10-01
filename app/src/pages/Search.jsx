@@ -37,7 +37,7 @@ function CrowdChip({ routeId }) {
   const color = level === 'Packed' ? '#B3402E' : level === 'Seats full' ? '#E4572E' : '#2E7D4F'
   return (
     <span
-      className="rounded-md border px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest"
+      className="rounded-md border px-2 py-0.5 font-mono text-xs font-bold tracking-widest"
       style={{ color, borderColor: `${color}55`, background: `${color}12` }}
       title="Latest rider crowd report"
     >
@@ -66,7 +66,8 @@ function ResultCard({ route, locations, faved, onToggleFav }) {
             onToggleFav(route.route_id)
           }}
           title={faved ? 'Remove from favorites' : 'Save route to favorites'}
-          className={`rounded-md border px-2 py-1 font-mono text-xs transition ${
+          aria-label={faved ? 'Remove from favorites' : 'Save route to favorites'}
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-md border text-base transition ${
             faved
               ? 'border-signal/60 bg-signal/10 text-signal'
               : 'border-edge bg-panel text-fog hover:border-signal/50 hover:text-signal'
@@ -75,11 +76,11 @@ function ResultCard({ route, locations, faved, onToggleFav }) {
           {faved ? '★' : '☆'}
         </button>
         {isTransfer ? (
-          <span className="rounded-md border border-amber/40 bg-amber/10 px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest text-amber">
+          <span className="rounded-md border border-amber/40 bg-amber/10 px-2 py-0.5 font-mono text-xs font-bold tracking-widest text-amber">
             TRANSFER
           </span>
         ) : (
-          <span className="rounded-md border border-phos/40 bg-phos/10 px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest text-phos">
+          <span className="rounded-md border border-phos/40 bg-phos/10 px-2 py-0.5 font-mono text-xs font-bold tracking-widest text-phos">
             DIRECT
           </span>
         )}
@@ -119,7 +120,7 @@ function ResultCard({ route, locations, faved, onToggleFav }) {
         </div>
       )}
 
-      <div className="mt-3 flex items-center gap-1 font-mono text-[10px] uppercase tracking-widest text-fog">
+      <div className="mt-3 flex items-center gap-1 font-mono text-xs uppercase tracking-widest text-fog">
         {route.stops?.slice(0, 8).map((s, i) => (
           <span key={s.stop_id} className="flex items-center gap-1">
             {i > 0 && <span className="text-edge">—</span>}
@@ -194,12 +195,12 @@ export default function Search() {
 
       {/* search panel */}
       <section className="rounded-2xl border border-edge bg-panel p-5 sm:p-6">
-        <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
+        <Mono className="text-xs font-bold tracking-[0.3em] text-fog">
           PLAN YOUR TRIP
         </Mono>
         <div className="mt-4 grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_auto_1fr_auto]">
           <label className="block">
-            <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-fog">
+            <span className="mb-1.5 block font-mono text-xs uppercase tracking-[0.2em] text-fog">
               From
             </span>
             <select value={from} onChange={(e) => setFrom(e.target.value)} className={selectCls}>
@@ -218,7 +219,7 @@ export default function Search() {
             ⇄
           </button>
           <label className="block">
-            <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-fog">
+            <span className="mb-1.5 block font-mono text-xs uppercase tracking-[0.2em] text-fog">
               To
             </span>
             <select value={to} onChange={(e) => setTo(e.target.value)} className={selectCls}>
@@ -242,7 +243,7 @@ export default function Search() {
       {/* results */}
       <section className="space-y-4">
         <div className="flex items-center gap-3">
-          <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
+          <Mono className="text-xs font-bold tracking-[0.3em] text-fog">
             RESULTS
           </Mono>
           {results && (
@@ -261,7 +262,7 @@ export default function Search() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setFavOnly((v) => !v)}
-              className={`rounded-md border px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest transition ${
+              className={`inline-flex min-h-11 items-center rounded-md border px-3 font-mono text-xs font-bold tracking-widest transition ${
                 favOnly
                   ? 'border-signal/60 bg-signal/10 text-signal'
                   : 'border-edge bg-panel text-fog hover:text-snow'
@@ -271,7 +272,7 @@ export default function Search() {
               ★ FAVORITES{favs.length ? ` (${favs.length})` : ''}
             </button>
             {favOnly && favs.length === 0 && (
-              <span className="font-mono text-[10px] text-fog">
+              <span className="font-mono text-xs text-fog">
                 no saved routes yet — tap ☆ on a route card
               </span>
             )}

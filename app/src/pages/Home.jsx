@@ -398,8 +398,8 @@ export default function Home() {
       {/* ---------- FOOTER / CREDITS ---------- */}
       <footer className="mx-auto max-w-7xl px-4 py-12 text-center sm:px-6">
         <p className="font-mono text-xs tracking-[0.18em] text-fog">
-          Data &amp; media: Pexels · Maps © OpenStreetMap contributors · Tiles ©
-          Esri · Built in one day at a hackathon.
+          Data &amp; media: Pexels · Maps © OpenStreetMap contributors · Basemaps
+          © CARTO · Built in one day at a hackathon.
         </p>
       </footer>
     </div>

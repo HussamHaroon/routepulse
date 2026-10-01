@@ -305,9 +305,14 @@ app.get('/api/routes', (req, res) => {
 
   const allRoutes = db.prepare('SELECT * FROM route WHERE active_status = 1 ORDER BY route_id').all();
   if (!from || !to) {
+    const withStops = req.query.with_stops === '1';
+    const stopsByRoute = db.prepare(
+      'SELECT stop_id, stop_name, lat, lng, stop_order FROM stop WHERE route_id = ? ORDER BY stop_order'
+    );
     return res.json({
       routes: allRoutes.map((r) => ({
         ...r,
+        ...(withStops ? { stops: stopsByRoute.all(r.route_id) } : {}),
         crowd: crowdOf(r.route_id),
       })),
     });
@@ -591,6 +596,111 @@ app.get('/api/drivers', (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// WP3: delay-rhythm analytics (judged novelty feature) + ETA accuracy grades.
+// Mined from the Completed-trip history seeded once by ./history.js.
+// ---------------------------------------------------------------------------
+const fmtHour = (h) => `${String(h).padStart(2, '0')}:00`;
+
+function verdictFor(worstHour, worstAvg) {
+  if (worstHour == null) return 'not enough history yet';
+  const band = worstHour <= 10 ? 'morning' : worstHour <= 15 ? 'midday' : 'evening';
+  if (worstAvg >= 12) return `chronic ${band} delays — budget +${Math.round(worstAvg)} min around ${fmtHour(worstHour)}`;
+  if (worstAvg >= 7) return `regular ${band} delays of ~${Math.round(worstAvg)} min around ${fmtHour(worstHour)}`;
+  return 'no strong delay rhythm — delays stay mild through the day';
+}
+
+app.get('/api/analytics/delay-patterns', (_req, res) => {
+  const rows = db
+    .prepare(
+      `SELECT route_id, CAST(strftime('%H', start_time) AS INTEGER) AS hour,
+              ROUND(AVG(delay_minutes), 1) AS avg_delay_min, COUNT(*) AS samples
+         FROM trip
+        WHERE trip_status = 'Completed' AND start_time IS NOT NULL
+        GROUP BY route_id, hour
+       HAVING samples >= 3
+        ORDER BY route_id, hour`
+    )
+    .all();
+  const names = new Map(db.prepare('SELECT route_id, route_name FROM route').all().map((r) => [r.route_id, r.route_name]));
+  const byRoute = new Map();
+  for (const row of rows) {
+    if (!byRoute.has(row.route_id)) {
+      byRoute.set(row.route_id, { route_id: row.route_id, route_name: names.get(row.route_id) ?? null, by_hour: [] });
+    }
+    byRoute.get(row.route_id).by_hour.push({
+      hour: row.hour,
+      avg_delay_min: row.avg_delay_min,
+      samples: row.samples,
+    });
+  }
+  const patterns = [...byRoute.values()]
+    .map((p) => {
+      const worst = p.by_hour.reduce((a, b) => (b.avg_delay_min > a.avg_delay_min ? b : a));
+      return {
+        ...p,
+        worst_hour: worst.hour,
+        worst_avg_delay_min: worst.avg_delay_min,
+        verdict: verdictFor(worst.hour, worst.avg_delay_min),
+      };
+    })
+    .sort((a, b) => b.worst_avg_delay_min - a.worst_avg_delay_min); // worst offender first
+  res.json({ patterns });
+});
+
+app.get('/api/analytics/summary', (_req, res) => {
+  const completed = "trip_status = 'Completed' AND start_time IS NOT NULL";
+  const network = db.prepare(`SELECT ROUND(AVG(delay_minutes), 1) AS avg FROM trip WHERE ${completed}`).get();
+  const topRoute = db
+    .prepare(
+      `SELECT route_id, ROUND(AVG(delay_minutes), 1) AS avg_delay_min
+         FROM trip WHERE ${completed} GROUP BY route_id
+        ORDER BY AVG(delay_minutes) DESC LIMIT 1`
+    )
+    .get();
+  const peak = db
+    .prepare(
+      `SELECT CAST(strftime('%H', start_time) AS INTEGER) AS hour, ROUND(AVG(delay_minutes), 1) AS avg_delay_min
+         FROM trip WHERE ${completed} GROUP BY hour
+       HAVING COUNT(*) >= 3
+        ORDER BY AVG(delay_minutes) DESC LIMIT 1`
+    )
+    .get();
+  let mostDelayed = null;
+  if (topRoute) {
+    const r = db.prepare('SELECT route_name FROM route WHERE route_id = ?').get(topRoute.route_id);
+    mostDelayed = {
+      route_id: topRoute.route_id,
+      route_name: r?.route_name ?? null,
+      avg_delay_min: topRoute.avg_delay_min,
+    };
+  }
+  res.json({
+    most_delayed_route: mostDelayed,
+    peak_delay_hour: peak?.hour ?? null,
+    network_avg_delay_min: network?.avg ?? 0,
+  });
+});
+
+app.get('/api/analytics/eta-accuracy', (_req, res) => {
+  const errors = db
+    .prepare('SELECT predicted_eta_min, actual_eta_min FROM eta_sample WHERE actual_eta_min IS NOT NULL')
+    .all()
+    .map((r) => r.actual_eta_min - r.predicted_eta_min);
+  if (!errors.length) {
+    return res.json({ samples: 0, median_error_min: null, within_2min_pct: null });
+  }
+  const sorted = [...errors].sort((a, b) => a - b);
+  const mid = sorted.length >> 1;
+  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  const within = errors.filter((e) => Math.abs(e) <= 2).length;
+  res.json({
+    samples: errors.length,
+    median_error_min: round1(median),
+    within_2min_pct: Math.round((within / errors.length) * 100),
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Trip lifecycle
 // ---------------------------------------------------------------------------
 function startTripRow(busId, driverId, routeId) {
@@ -602,6 +712,12 @@ function startTripRow(busId, driverId, routeId) {
       "INSERT INTO trip (bus_id, driver_id, route_id, start_time, current_location, trip_status, delay_minutes) VALUES (?,?,?,?,?,'On Route',0)"
     )
     .run(busId, driverId, routeId, now, `${s0.lat},${s0.lng}`);
+  // WP3b: record our opening promise — final-stop ETA at the default speed —
+  // so the trip can be graded on /api/analytics/eta-accuracy when it ends.
+  const predicted = round1((ctx.poly.total / DEFAULT_SPEED_KMH) * 60);
+  db.prepare(
+    'INSERT INTO eta_sample (trip_id, route_id, predicted_eta_min, actual_eta_min, measured_at) VALUES (?,?,?,NULL,?)'
+  ).run(Number(info.lastInsertRowid), routeId, predicted, now);
   return Number(info.lastInsertRowid);
 }
 
@@ -610,6 +726,13 @@ function endTripRow(trip, newStatus = 'Completed') {
   db.prepare("UPDATE trip SET end_time = ?, trip_status = ? WHERE trip_id = ?").run(now, newStatus, trip.trip_id);
   db.prepare("UPDATE bus SET status = 'Available' WHERE bus_id = ?").run(trip.bus_id);
   db.prepare("UPDATE driver SET current_trip = NULL, status = 'Available' WHERE driver_id = ?").run(trip.driver_id);
+  // WP3b: grade the prediction — actual vs predicted, only if one was recorded.
+  const startMs = trip.start_time ? new Date(trip.start_time).getTime() : NaN;
+  if (Number.isFinite(startMs)) {
+    const actual = round1((Date.now() - startMs) / 60000);
+    db.prepare('UPDATE eta_sample SET actual_eta_min = ?, measured_at = ? WHERE trip_id = ? AND actual_eta_min IS NULL')
+      .run(actual, now, trip.trip_id);
+  }
   tripByBus.delete(trip.bus_id);
   positions.delete(trip.bus_id);
 }
@@ -748,6 +871,9 @@ app.use((err, _req, res, _next) => {
 });
 
 // ---------------------------------------------------------------------------
+// WP3: 14-day trip history + ETA samples (idempotent — runs once per DB).
+seedHistory();
+
 loadLiveState();
 
 // WP2: seed a few crowd levels so the UI shows data before the first report.
@@ -809,5 +935,6 @@ server.listen(PORT, () => {
   console.log('│  GET/POST /api/alerts            service alerts      │');
   console.log('│  GET  /api/stats  /api/drivers   dashboards          │');
   console.log('│  POST /api/trips/start /:id/update /:id/end          │');
+  console.log('│  GET  /api/analytics/*  delay rhythms + ETA grades  │');
   console.log('└──────────────────────────────────────────────────────┘');
 });

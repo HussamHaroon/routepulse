@@ -42,11 +42,52 @@ body {
   background: var(--color-ink);
   color: var(--color-snow);
   font-family: var(--font-text);
+  /* belt-and-suspenders: nothing may scroll the page sideways */
+  overflow-x: clip;
 }
 
 body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- mobile hardening utilities ---------- */
+/* full-height sections that respect the mobile URL bar (svh with vh fallback) */
+.rp-fullh {
+  height: 100vh;
+  height: 100svh;
+}
+.rp-hero {
+  min-height: 92vh;
+  min-height: 92svh;
+}
+/* track/operator map: top of page at ~45% of the small viewport */
+.rp-map45 {
+  height: 45vh;
+  min-height: 300px;
+}
+@supports (height: 1svh) {
+  .rp-map45 {
+    height: 45svh;
+  }
+}
+@media (min-width: 640px) {
+  .rp-map45 {
+    height: 480px;
+    min-height: 480px;
+  }
+}
+/* hide scrollbars on horizontal snap rails */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* fade the right edge of a horizontal rail so cut-off content is obvious */
+.rp-rail {
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 22px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 22px), transparent 100%);
 }
 
 /* Headlines: Clash Display 600, tight leading (utilities may override) */
@@ -97,7 +138,7 @@ h3 {
 .leaflet-control-attribution {
   background: rgba(244, 239, 228, 0.82) !important;
   color: #6e6656 !important;
-  font-size: 10px !important;
+  font-size: 11px !important;
 }
 .leaflet-control-attribution a {
   color: #6e6656 !important;
@@ -117,7 +158,7 @@ h3 {
   border: 1px solid #d9d1be;
   border-radius: 6px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 12px;
   box-shadow: 4px 4px 0 rgba(33, 29, 22, 0.12);
 }
 .leaflet-popup-tip {
@@ -133,7 +174,7 @@ h3 {
   box-shadow: none;
   color: #6e6656;
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   text-shadow:
     0 1px 0 #f4efe4,
@@ -260,6 +301,8 @@ h3 {
   border-bottom: 1px solid var(--color-edge);
   padding: 0.55rem 1rem;
   position: relative;
+  /* never wider than the screen — long route names clip, not overflow */
+  max-width: 100%;
 }
 .rp-roll::before,
 .rp-roll::after {
@@ -281,6 +324,10 @@ h3 {
 .rp-roll-window {
   overflow: hidden;
   height: 2.4rem;
+  min-width: 0;
+  flex: 0 1 auto;
+  mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, #000 0, #000 calc(100% - 18px), transparent 100%);
 }
 .rp-roll-strip {
   transition: transform 0.7s var(--ease-house);
@@ -381,8 +428,18 @@ h3 {
   .rp-bus::after,
   .rp-blink,
   .rp-skel,
-  .rp-flash {
+  .rp-flash,
+  .animate-ping {
     animation: none !important;
+  }
+  /* global calm: kill every transition/animation duration */
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
   .rp-roll-strip {
     transition: none !important;

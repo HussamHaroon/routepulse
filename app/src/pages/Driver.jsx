@@ -129,7 +129,7 @@ export default function Driver() {
   return (
     <div className="space-y-6">
       <div>
-        <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
+        <Mono className="text-xs font-bold tracking-[0.3em] text-fog">
           DRIVER CONSOLE
         </Mono>
         <h1 className="mt-1 text-3xl font-bold tracking-tight sm:text-4xl">
@@ -142,7 +142,7 @@ export default function Driver() {
         <section className="max-w-2xl rounded-2xl border border-edge bg-panel p-5 sm:p-6">
           <div className="grid gap-4 sm:grid-cols-3">
             <label className="block">
-              <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-fog">
+              <span className="mb-1.5 block font-mono text-xs uppercase tracking-[0.2em] text-fog">
                 Driver
               </span>
               {!drivers ? (
@@ -156,7 +156,7 @@ export default function Driver() {
                     if (d?.assigned_bus) setBusId(d.assigned_bus)
                     if (d?.route_id) setRouteId(d.route_id)
                   }}
-                  className="w-full rounded-lg border border-edge bg-ink px-3 py-2.5 font-mono text-sm text-snow outline-none focus:border-phos/60"
+                  className="min-h-11 w-full rounded-lg border border-edge bg-ink px-3 py-3 font-mono text-sm text-snow outline-none focus:border-phos/60"
                 >
                   {drivers.map((d) => (
                     <option key={d.driver_id} value={d.driver_id}>
@@ -167,13 +167,13 @@ export default function Driver() {
               )}
             </label>
             <label className="block">
-              <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-fog">
+              <span className="mb-1.5 block font-mono text-xs uppercase tracking-[0.2em] text-fog">
                 Bus
               </span>
               <select
                 value={busId}
                 onChange={(e) => setBusId(e.target.value)}
-                className="w-full rounded-lg border border-edge bg-ink px-3 py-2.5 font-mono text-sm text-snow outline-none focus:border-phos/60"
+                className="min-h-11 w-full rounded-lg border border-edge bg-ink px-3 py-3 font-mono text-sm text-snow outline-none focus:border-phos/60"
               >
                 <option value="">— select bus —</option>
                 {ALL_BUS_IDS.map((id) => (
@@ -184,13 +184,13 @@ export default function Driver() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1.5 block font-mono text-[10px] uppercase tracking-[0.2em] text-fog">
+              <span className="mb-1.5 block font-mono text-xs uppercase tracking-[0.2em] text-fog">
                 Route
               </span>
               <select
                 value={routeId}
                 onChange={(e) => setRouteId(e.target.value)}
-                className="w-full rounded-lg border border-edge bg-ink px-3 py-2.5 font-mono text-sm text-snow outline-none focus:border-phos/60"
+                className="min-h-11 w-full rounded-lg border border-edge bg-ink px-3 py-3 font-mono text-sm text-snow outline-none focus:border-phos/60"
               >
                 <option value="">— select route —</option>
                 {ROUTES.map((r) => (
@@ -209,7 +209,7 @@ export default function Driver() {
             ▶ START TRIP
           </button>
           {driver && (
-            <p className="mt-3 font-mono text-[10px] text-fog">
+            <p className="mt-3 font-mono text-xs text-fog">
               ASSIGNED: {driver.assigned_bus || 'SPARE'} · STATUS {driver.status}
             </p>
           )}
@@ -219,7 +219,7 @@ export default function Driver() {
         <section className="max-w-3xl space-y-4">
           <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-phos/40 bg-phos/5 p-5">
             <div>
-              <Mono className="text-[10px] tracking-[0.3em] text-phos">
+              <Mono className="text-xs tracking-[0.3em] text-phos">
                 TRIP {trip.trip_id} ACTIVE
               </Mono>
               <div className="mt-1 font-mono text-2xl font-extrabold text-snow">
@@ -237,42 +237,42 @@ export default function Driver() {
           </div>
 
           {/* status buttons */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <button
               onClick={() => update({ trip_status: 'Delayed', delay_minutes: (trip.delay_minutes || 0) + 10, note: 'traffic delay' }, 'TRAFFIC DELAY +10 MIN')}
               disabled={busy}
-              className={`${btn} border-amber/50 bg-amber/10 text-amber hover:bg-amber/20`}
+              className={`${btn} min-h-12 w-full border-amber/50 bg-amber/10 text-amber hover:bg-amber/20`}
             >
               ⚠ TRAFFIC DELAY
             </button>
             <button
               onClick={() => update({ trip_status: 'Delayed', delay_minutes: (trip.delay_minutes || 0) + 20, note: 'vehicle issue' }, 'VEHICLE ISSUE +20 MIN')}
               disabled={busy}
-              className={`${btn} border-alert/50 bg-alert/10 text-alert hover:bg-alert/20`}
+              className={`${btn} min-h-12 w-full border-alert/50 bg-alert/10 text-alert hover:bg-alert/20`}
             >
               ✖ VEHICLE ISSUE
             </button>
             <button
               onClick={() => update({ trip_status: 'Cancelled', note: 'route blocked' }, 'ROUTE BLOCKED — TRIP CANCELLED')}
               disabled={busy}
-              className={`${btn} border-fog/50 bg-panel text-fog hover:bg-panel2`}
+              className={`${btn} min-h-12 w-full border-fog/50 bg-panel text-fog hover:bg-panel2`}
             >
               ⛔ ROUTE BLOCKED
             </button>
             <button
               onClick={finish}
               disabled={busy}
-              className={`${btn} border-phos/50 bg-phos/10 text-phos hover:bg-phos/20`}
+              className={`${btn} min-h-12 w-full border-phos/50 bg-phos/10 text-phos hover:bg-phos/20`}
             >
               ■ END TRIP
             </button>
           </div>
 
           {/* GPS toggle */}
-          <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-edge bg-panel p-5">
+          <div className="flex flex-col gap-3 rounded-2xl border border-edge bg-panel p-5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
             <button
               onClick={toggleGps}
-              className={`rounded-lg px-5 py-3 font-mono text-xs font-extrabold tracking-widest transition ${
+              className={`inline-flex min-h-12 w-full items-center justify-center rounded-lg px-5 py-3 font-mono text-xs font-extrabold tracking-widest transition sm:w-auto ${
                 gpsOn
                   ? 'bg-phos text-ink hover:bg-[#34d97a]'
                   : 'border border-edge bg-panel2 text-fog hover:text-snow'
@@ -280,7 +280,7 @@ export default function Driver() {
             >
               {gpsOn ? '◉ MY GPS: ON' : '◎ ENABLE MY GPS'}
             </button>
-            <div className="font-mono text-xs text-fog">
+            <div className="min-w-0 break-words font-mono text-xs leading-relaxed text-fog">
               {gpsPos ? (
                 <span className="text-phos">
                   {gpsPos.lat.toFixed(5)}, {gpsPos.lng.toFixed(5)} · {Math.round(gpsPos.speed || 0)} km/h → POSTING /api/ingest/{busId}
@@ -294,7 +294,7 @@ export default function Driver() {
           </div>
 
           {/* simulator note */}
-          <p className="rounded-lg border border-cyan/30 bg-cyan/5 px-4 py-3 font-mono text-[10px] leading-relaxed text-cyan">
+          <p className="rounded-lg border border-cyan/30 bg-cyan/5 px-4 py-3 font-mono text-xs leading-relaxed text-cyan">
             NOTE — BUS MOTION IS DRIVEN BY THE GPS SIMULATOR SERVICE (MOVES ALONG THE
             ROUTE POLYLINE, POSTS EVERY 2s). "ENABLE MY GPS" ADDS REAL PHONE
             COORDINATES AS A SECOND SOURCE. THIS BUILD IS SIMULATED FOR THE DEMO.

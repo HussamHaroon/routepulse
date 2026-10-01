@@ -17,7 +17,7 @@ const CROWD_LEVELS = [
 function ConfidenceChip({ confidence, range }) {
   if (confidence === 'low') {
     return (
-      <span className="rp-blink inline-block rounded border border-fog/40 bg-fog/10 px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wider text-fog">
+      <span className="rp-blink inline-block whitespace-nowrap rounded border border-fog/40 bg-fog/10 px-1.5 py-0.5 font-mono text-xs font-bold tracking-wider text-fog">
         ESTIMATING…
       </span>
     )
@@ -26,7 +26,7 @@ function ConfidenceChip({ confidence, range }) {
   const color = high ? '#2E7D4F' : '#E4572E'
   return (
     <span
-      className="inline-block rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wider"
+      className="inline-block whitespace-nowrap rounded border px-1 py-0.5 font-mono text-xs font-bold tracking-wider"
       style={{ color, borderColor: `${color}55`, background: `${color}12` }}
       title={high ? 'Stable speed + fresh position' : 'Speed varying — treat as rough'}
     >
@@ -46,13 +46,13 @@ function EtaRow({ stop, eta, remainSec }) {
       </span>
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold text-snow">{stop.stop_name}</div>
-        <div className="mt-0.5 flex items-center gap-2 font-mono text-[10px] text-fog">
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 font-mono text-xs text-fog">
           <span>{eta?.distance_km != null ? `${eta.distance_km} KM` : '—'}</span>
           <span className="text-edge">·</span>
           <span>{eta?.speed_kmh != null ? `${eta.speed_kmh} KM/H` : '—'}</span>
         </div>
       </div>
-      <div className="shrink-0 text-right">
+      <div className="shrink-0 pl-1 text-right">
         {eta == null || eta.eta_min == null ? (
           <Skeleton className="h-6 w-16" />
         ) : due ? (
@@ -199,26 +199,26 @@ export default function Track() {
   return (
     <div className="space-y-4">
       {/* header */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Link
           to="/search"
-          className="rounded-md border border-edge bg-panel px-3 py-1.5 font-mono text-xs font-bold text-fog transition hover:border-phos/50 hover:text-phos"
+          className="inline-flex min-h-11 items-center rounded-md border border-edge bg-panel px-3.5 font-mono text-xs font-bold text-fog transition hover:border-phos/50 hover:text-phos"
         >
           ← BACK
         </Link>
         <RouteChip route={route} big />
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-          {route.route_name}
-        </h1>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
           {route.fare_pkr != null && (
-            <span className="rounded-md border border-edge bg-panel px-2 py-1 font-mono text-[10px] font-bold tracking-widest text-fog">
-              FARE PKR {route.fare_pkr}
+            <span className="whitespace-nowrap rounded-md border border-edge bg-panel px-2 py-1 font-mono text-xs font-bold tracking-widest text-fog">
+              PKR {route.fare_pkr}
             </span>
           )}
           <LiveBadge source={demo ? 'demo' : source} />
           {leadBus && <StatusChip status={leadBus.trip_status} />}
         </div>
+        <h1 className="w-full min-w-0 truncate text-lg font-bold tracking-tight sm:w-auto sm:flex-1 sm:text-2xl">
+          {route.route_name}
+        </h1>
       </div>
 
       {/* alert banners */}
@@ -227,15 +227,15 @@ export default function Track() {
           {allAlerts.map((a) => (
             <div
               key={`${a.alert_id}-${a.viaWs ? 'ws' : 'poll'}`}
-              className={`flex items-start gap-3 rounded-lg border-l-4 border-amber bg-amber/10 px-4 py-3 ${
+              className={`flex flex-col gap-1.5 rounded-lg border-l-4 border-amber bg-amber/10 px-4 py-3 sm:flex-row sm:items-start sm:gap-3 ${
                 a.viaWs ? 'rp-flash' : ''
               }`}
             >
-              <Mono className="shrink-0 text-[10px] font-extrabold tracking-widest text-amber">
+              <Mono className="shrink-0 text-xs font-extrabold tracking-widest text-amber">
                 {a.viaWs ? 'JUST NOW · LIVE' : 'SERVICE ALERT'}
               </Mono>
-              <p className="flex-1 text-sm text-snow">{a.message}</p>
-              <Mono className="shrink-0 text-[10px] text-fog">
+              <p className="min-w-0 flex-1 text-sm leading-snug text-snow">{a.message}</p>
+              <Mono className="shrink-0 text-xs text-fog">
                 {a.route_id ? `ROUTE ${String(a.route_id).replace('R', '')} · ` : 'ALL ROUTES · '}
                 {agoMin(a.created_at)} MIN AGO
               </Mono>
@@ -257,7 +257,7 @@ export default function Track() {
             stops={route.stops}
             buses={routeBuses}
             fitKey={routeId}
-            className="h-[380px] sm:h-[480px]"
+            className="rp-map45"
           />
 
           {/* live input readout — shows the ETA inputs (distance, speed, delay) */}
@@ -268,12 +268,12 @@ export default function Track() {
               { label: 'DELAY', value: leadBus ? `${leadBus.delay_minutes} MIN` : '—', color: leadBus?.delay_minutes > 0 ? '#E4572E' : '#8B98A5' },
               { label: 'NEXT STOP', value: leadBus?.next_stop || '—', color: '#E6EDF3', small: true },
             ].map((c) => (
-              <div key={c.label} className="rounded-lg border border-edge bg-panel px-3 py-2.5">
-                <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-fog">
+              <div key={c.label} className="min-w-0 rounded-lg border border-edge bg-panel px-3 py-2.5">
+                <div className="font-mono text-xs uppercase tracking-[0.2em] text-fog">
                   {c.label}
                 </div>
                 <div
-                  className={`truncate font-mono font-extrabold ${c.small ? 'text-xs' : 'text-lg'}`}
+                  className={`truncate font-mono font-extrabold ${c.small ? 'text-xs' : 'text-base sm:text-lg'}`}
                   style={{ color: c.color }}
                 >
                   {c.value}
@@ -283,16 +283,16 @@ export default function Track() {
           </div>
           {/* crowd report (P1) */}
           <div className="rounded-xl border border-edge bg-panel px-4 py-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+              <Mono className="text-xs font-bold tracking-[0.3em] text-fog">
                 HOW CROWDED?
               </Mono>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:gap-2">
                 {CROWD_LEVELS.map(({ label, value }) => (
                   <button
                     key={value}
                     onClick={() => sendCrowd(value)}
-                    className={`rounded-md border px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest transition ${
+                    className={`inline-flex min-h-11 items-center justify-center rounded-md border px-2 font-mono text-xs font-bold tracking-wide transition ${
                       crowd?.level === value
                         ? 'border-signal/60 bg-signal/10 text-signal'
                         : 'border-edge bg-panel2 text-fog hover:border-signal/50 hover:text-signal'
@@ -302,7 +302,7 @@ export default function Track() {
                   </button>
                 ))}
               </div>
-              <Mono className="ml-auto text-[10px] text-fog">
+              <Mono className="text-xs text-fog sm:ml-auto">
                 {crowd?.level
                   ? `LATEST · ${crowd.level.toUpperCase()}${crowd.updated_at ? ` · ${agoMin(crowd.updated_at)} MIN AGO` : ''}`
                   : crowdSent
@@ -316,10 +316,10 @@ export default function Track() {
         {/* ETA sidebar */}
         <aside className="rounded-xl border border-edge bg-panel">
           <div className="flex items-center justify-between border-b border-edge px-4 py-3">
-            <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
+            <Mono className="text-xs font-bold tracking-[0.3em] text-fog">
               STOP ETAS
             </Mono>
-            <Mono className="text-[10px] text-fog">
+            <Mono className="text-xs text-fog">
               {etas ? 'TICKING' : 'LOADING…'}
             </Mono>
           </div>
@@ -328,7 +328,7 @@ export default function Track() {
             if (!up) return null
             const walkMin = Math.max(1, Math.ceil((up.distance_km / 5) * 60))
             return (
-              <div className="border-b border-edge px-4 py-2 font-mono text-[10px] tracking-widest text-fog">
+              <div className="border-b border-edge px-4 py-2 font-mono text-xs tracking-widest text-fog">
                 WALK TO {String(up.stop_name).toUpperCase()} ≈{' '}
                 <span className="font-bold text-snow">{walkMin} MIN</span> (5 KM/H)
               </div>
@@ -346,7 +346,7 @@ export default function Track() {
             return <EtaRow key={stop.stop_id} stop={stop} eta={eta} remainSec={remainSec} />
           })}
           <div className="border-t border-edge px-4 py-2.5">
-            <Mono className="text-[9px] leading-relaxed text-fog">
+            <Mono className="text-xs leading-relaxed text-fog">
               ETA = DISTANCE TO STOP ÷ ROLLING AVG SPEED + DELAY · CONFIDENCE FROM SPEED
               VARIANCE + POSITION FRESHNESS
             </Mono>
