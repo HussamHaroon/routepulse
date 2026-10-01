@@ -181,6 +181,21 @@ h3 {
 .rp-stop-label::before {
   display: none;
 }
+/* bus hover tooltip — compact quick-info (click popup keeps full detail) */
+.rp-bus-tip {
+  background: rgba(33, 29, 22, 0.9); /* #211D16E6 */
+  border: 1px solid rgba(244, 239, 228, 0.25);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(18, 20, 23, 0.4);
+  color: #f4efe4;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 4px 8px;
+}
+.rp-bus-tip::before {
+  display: none; /* hide default leaflet arrow, like .rp-stop-label */
+}
 
 /* ---------- heartbeat bus dots (signal ring, 2s pulse) ---------- */
 .rp-bus {

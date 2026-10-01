@@ -355,14 +355,16 @@ app.get('/api/routes', (req, res) => {
         destination: r.destination,
         fare_pkr: r.fare_pkr,
         crowd: crowdOf(r.route_id),
-        stops: stops.map((s) => s.stop_name), // ordered stop names
+        stops: stops.map((s) => ({ stop_id: s.stop_id, stop_name: s.stop_name, stop_order: s.stop_order, lat: s.lat, lng: s.lng })), // full stop objects, matches /api/routes/:id
       });
     }
   }
   if (direct.length) return res.json({ direct: true, routes: direct });
 
-  // No direct route — look for a transfer A: from → X, then B: X → to
+  // No direct route — collect ALL transfers A: from → X, then B: X → to
   const withStops = allRoutes.map((r) => ({ r, stops: stopsByRoute.all(r.route_id) }));
+  const transfers = [];
+  const seen = new Set();
   for (const { r: ra, stops: sa } of withStops) {
     const fi = sa.findIndex((s) => norm(s.stop_name) === from);
     if (fi === -1) continue;
@@ -374,37 +376,41 @@ app.get('/api/routes', (req, res) => {
         const via = sa[ix].stop_name;
         const xj = sb.findIndex((s) => norm(s.stop_name) === norm(via));
         if (xj !== -1 && xj < tj) {
-          return res.json({
-            direct: false,
-            // legacy top-level shape, kept for compat
+          const key = `${ra.route_id}|${norm(via)}|${rb.route_id}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+          transfers.push({
+            route_id: ra.route_id,
+            route_name: ra.route_name,
+            start_location: ra.start_location,
+            destination: ra.destination,
+            fare_pkr: ra.fare_pkr,
+            crowd: crowdOf(ra.route_id),
+            stops: sa.map((s) => ({ stop_id: s.stop_id, stop_name: s.stop_name, stop_order: s.stop_order, lat: s.lat, lng: s.lng })),
             transfer: {
               via_stop: via,
-              first: { route_id: ra.route_id, route_name: ra.route_name },
-              second: { route_id: rb.route_id, route_name: rb.route_name },
+              then_route_id: rb.route_id,
+              then_route_name: rb.route_name,
             },
-            // contract shape: first-leg route with transfer directions attached
-            routes: [
-              {
-                route_id: ra.route_id,
-                route_name: ra.route_name,
-                start_location: ra.start_location,
-                destination: ra.destination,
-                fare_pkr: ra.fare_pkr,
-                crowd: crowdOf(ra.route_id),
-                stops: sa.map((s) => s.stop_name),
-                transfer: {
-                  via_stop: via,
-                  then_route_id: rb.route_id,
-                  then_route_name: rb.route_name,
-                },
-              },
-            ],
           });
         }
       }
     }
   }
-  return res.json({ direct: false, transfer: null });
+  if (transfers.length) {
+    const first = transfers[0];
+    return res.json({
+      direct: false,
+      // legacy top-level shape, kept for compat (first option only)
+      transfer: {
+        via_stop: first.transfer.via_stop,
+        first: { route_id: first.route_id, route_name: first.route_name },
+        second: { route_id: first.transfer.then_route_id, route_name: first.transfer.then_route_name },
+      },
+      routes: transfers.slice(0, 12),
+    });
+  }
+  return res.json({ direct: false, transfer: null, routes: [] });
 });
 
 app.get('/api/routes/:id', (req, res) => {
@@ -867,7 +873,15 @@ app.post('/api/trips/:id/end', (req, res) => {
     [...tripByBus.values()].find((t) => t.trip_id === tripId) ||
     db.prepare('SELECT * FROM trip WHERE trip_id = ?').get(tripId);
   if (!trip) return res.status(404).json({ ok: false, error: `trip ${tripId} not found` });
-  if (trip.end_time) return res.status(409).json({ ok: false, error: 'trip already ended' });
+  // Idempotent: a 'route blocked' cancel already set end_time — a repeat /end
+  // returns success instead of 409 so the driver app can't get stuck.
+  if (trip.end_time) {
+    return res.json({
+      ok: true,
+      trip: db.prepare('SELECT * FROM trip WHERE trip_id = ?').get(tripId),
+      already_ended: true,
+    });
+  }
 
   endTripRow(trip, 'Completed');
   broadcast({ type: 'trip_ended', bus_id: trip.bus_id, trip_id: tripId, route_id: trip.route_id });

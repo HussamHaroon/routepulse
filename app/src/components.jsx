@@ -320,6 +320,19 @@ export function MapView({
           .filter((b) => b.lat != null && b.lng != null)
           .map((b) => (
             <Marker key={b.bus_id} position={[b.lat, b.lng]} icon={busIcon(b.trip_status)}>
+              {/* hover = quick info, click popup below = pinned detail */}
+              <Tooltip direction="top" offset={[0, -12]} className="rp-bus-tip">
+                <div>
+                  <div>BUS {b.bus_id}</div>
+                  <div>
+                    {b.route_id ? `ROUTE ${String(b.route_id).replace('R', '')}` : 'NO ROUTE'}
+                    {b.next_stop ? ` → ${b.next_stop}` : ''}
+                  </div>
+                  <div>
+                    {b.speed ?? 0} km/h · delay {b.delay_minutes ?? 0} min · {b.trip_status}
+                  </div>
+                </div>
+              </Tooltip>
               <Popup>
                 <div className="space-y-1">
                   <div className="font-bold text-[#2E7D4F]">BUS {b.bus_id}</div>

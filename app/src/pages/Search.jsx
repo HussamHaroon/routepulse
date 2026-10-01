@@ -353,7 +353,7 @@ export default function Search() {
             ?.routes.filter((r) => !favOnly || favs.includes(String(r.route_id)))
             .map((r) => (
               <ResultCard
-                key={`${r.route_id}-${r.transfer ? 'T' : 'D'}`}
+                key={`${r.route_id}-${r.transfer ? `${r.transfer.via_stop}-${r.transfer.then_route_id}` : 'D'}`}
                 route={r}
                 locations={locations}
                 faved={favs.includes(String(r.route_id))}

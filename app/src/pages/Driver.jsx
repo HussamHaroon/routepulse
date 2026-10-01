@@ -64,7 +64,15 @@ export default function Driver() {
     setActionMsg(null)
     try {
       const res = await updateTrip(trip.trip_id, body, demo)
-      setTrip(res.trip || { ...trip, ...body })
+      const next = res.trip || { ...trip, ...body }
+      // Cancel/complete set end_time server-side — the trip is over, so drop
+      // back to the start panel instead of a dead active-trip screen.
+      if (next.end_time || next.trip_status === 'Cancelled' || next.trip_status === 'Completed') {
+        setTrip(null)
+        stopGps()
+      } else {
+        setTrip(next)
+      }
       setActionMsg({ ok: true, text: label })
     } catch (e) {
       setActionMsg({ ok: false, text: e.message })
@@ -82,7 +90,15 @@ export default function Driver() {
       setTrip(null)
       stopGps()
     } catch (e) {
-      setActionMsg({ ok: false, text: e.message })
+      // A cancel can beat us to it — the client surfaces that as 'API 409
+      // …/end' (server text 'trip already ended'), which is success here.
+      if (e.message.includes('already ended') || e.message.includes('API 409')) {
+        setActionMsg({ ok: true, text: 'TRIP COMPLETED' })
+        setTrip(null)
+        stopGps()
+      } else {
+        setActionMsg({ ok: false, text: e.message })
+      }
     } finally {
       setBusy(false)
     }
@@ -267,8 +283,12 @@ export default function Driver() {
             </div>
           </div>
 
-          {/* status buttons */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {/* status buttons — grid grows to 5 columns while a delay is clearable */}
+          <div
+            className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${
+              trip.delay_minutes > 0 || trip.trip_status === 'Delayed' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'
+            }`}
+          >
             <button
               onClick={() => update({ trip_status: 'Delayed', delay_minutes: (trip.delay_minutes || 0) + 10, note: 'traffic delay' }, 'TRAFFIC DELAY +10 MIN')}
               disabled={busy}
@@ -283,6 +303,15 @@ export default function Driver() {
             >
               ✖ VEHICLE ISSUE
             </button>
+            {(trip.delay_minutes > 0 || trip.trip_status === 'Delayed') && (
+              <button
+                onClick={() => update({ trip_status: 'On Route', delay_minutes: 0 }, 'DELAY CLEARED — BACK ON ROUTE')}
+                disabled={busy}
+                className={`${btn} min-h-12 w-full border-phos/50 bg-panel text-phos hover:bg-phos/20`}
+              >
+                ✓ BACK ON ROUTE
+              </button>
+            )}
             <button
               onClick={() => update({ trip_status: 'Cancelled', note: 'route blocked' }, 'ROUTE BLOCKED — TRIP CANCELLED')}
               disabled={busy}
