@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getCrowd, searchRoutes } from '../api'
+import { getCrowd, getNetwork, searchRoutes } from '../api'
 import { getFavs, toggleFav } from '../favs'
 import { ALL_STOP_NAMES, haversineKm, routeNumber } from '../mock'
 import { useLiveLocations } from '../hooks'
@@ -34,14 +34,16 @@ function CrowdChip({ routeId }) {
     }
   }, [routeId])
   if (!level) return null
-  const color = level === 'Packed' ? '#B3402E' : level === 'Seats full' ? '#E4572E' : '#2E7D4F'
+  // backend vocabulary is lowercase: 'empty' | 'seats' | 'packed' (api/server.js)
+  const lvl = String(level).toLowerCase()
+  const color = lvl === 'packed' ? '#B3402E' : lvl === 'seats' ? '#E4572E' : '#2E7D4F'
   return (
     <span
       className="rounded-md border px-2 py-0.5 font-mono text-xs font-bold tracking-widest"
       style={{ color, borderColor: `${color}55`, background: `${color}12` }}
       title="Latest rider crowd report"
     >
-      CROWD · {level.toUpperCase()}
+      CROWD · {lvl === 'seats' ? 'SEATS FULL' : lvl.toUpperCase()}
     </span>
   )
 }
@@ -144,7 +146,31 @@ export default function Search() {
   const [favs, setFavs] = useState(getFavs)
   const [favOnly, setFavOnly] = useState(false)
 
-  const stops = useMemo(() => ALL_STOP_NAMES, [])
+  // Stop list must match the active feed: the mock network and the live
+  // database have completely different stop names, and offering mock names
+  // against the live API makes every manual search come back empty.
+  const [stops, setStops] = useState(ALL_STOP_NAMES)
+  useEffect(() => {
+    if (demo) {
+      setStops(ALL_STOP_NAMES)
+      return
+    }
+    let on = true
+    getNetwork(false)
+      .then((net) => {
+        if (!on) return
+        const names = [
+          ...new Set(
+            (net.routes || []).flatMap((r) => (r.stops || []).map((s) => s.stop_name))
+          ),
+        ].sort()
+        if (names.length) setStops(names)
+      })
+      .catch(() => {}) // API down — keep the mock list (search itself will surface the error)
+    return () => {
+      on = false
+    }
+  }, [demo])
 
   const run = async (f = from, t = to) => {
     setLoading(true)
@@ -158,11 +184,28 @@ export default function Search() {
     }
   }
 
-  // auto-search the demo pair on load (Minar-e-Pakistan → Kalma Chowk)
+  // auto-search on load and whenever the feed flips. The defaults
+  // (Minar-e-Pakistan → Kalma Chowk) only exist in the live database —
+  // swap in a valid mock pair in demo mode so the page never opens on
+  // "No service runs on this stretch".
   useEffect(() => {
-    run()
+    const fallbackFrom = stops.includes('Minar-e-Pakistan')
+      ? 'Minar-e-Pakistan'
+      : stops.includes('City Center')
+        ? 'City Center'
+        : stops[0]
+    const fallbackTo = stops.includes('Kalma Chowk')
+      ? 'Kalma Chowk'
+      : stops.includes('University Gate')
+        ? 'University Gate'
+        : stops.find((s) => s !== fallbackFrom) || stops[0]
+    const f = stops.includes(from) ? from : fallbackFrom
+    const t = stops.includes(to) && to !== f ? to : fallbackTo
+    if (f !== from) setFrom(f)
+    if (t !== to) setTo(t)
+    run(f, t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demo])
+  }, [demo, stops])
 
   const swap = () => {
     const f = to

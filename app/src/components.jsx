@@ -131,29 +131,58 @@ const busIcon = (status) =>
     iconAnchor: [8, 8],
   })
 
-function FitBounds({ fitKey }) {
+// Fit to the data being rendered, not layers scraped off the map (those may
+// not be attached yet when this effect first runs, and a static fitKey never
+// re-fits once the live network replaces the mock fallback). Re-runs when the
+// point count changes so the view always lands on the real network extent.
+function FitBounds({ fitKey, points = [] }) {
   const map = useMap()
   useEffect(() => {
-    // fit to all route layers currently on the map
-    const group = new L.FeatureGroup()
-    map.eachLayer((l) => {
-      if (l instanceof L.Polyline || l instanceof L.CircleMarker) group.addLayer(l)
-    })
-    const b = group.getBounds()
-    if (b && b.isValid()) map.fitBounds(b.pad(0.12), { animate: false })
+    const valid = points.filter(
+      (p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])
+    )
+    if (!valid.length) return
+    try {
+      const b = L.latLngBounds(valid)
+      if (b.isValid()) map.fitBounds(b.pad(0.12), { animate: false })
+    } catch {
+      /* bad coords — keep the default view instead of crashing */
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitKey])
+  }, [fitKey, points.length])
   return null
 }
 
 /**
- * MapView — CARTO basemap (Dark Matter at night, Positron by day, sepia-tinted),
- * route polylines, stop markers, pulsing bus dots.
- * polylines: [{ coords: [[lat,lng]...], color?, weight? }]
+ * MapView — CARTO basemap (Dark Matter at night, Positron (light_all) by day —
+ * no tint/filter applied), route polylines, stop markers, pulsing bus dots.
+ * polylines: [{ coords: [[lat,lng]...], color?, weight?, hot? }] — hot routes glow red
  * stops:     [{ lat, lng, stop_name, stop_order }]
  * buses:     [{ bus_id, lat, lng, speed, delay_minutes, trip_status, next_stop }]
+ * trails:    [{ busId, points: [[lat,lng]...], status? }] — fading comet trails
+ * ping:      { lat, lng, key } — expanding radar ring for a live service alert
+ * drawIn:    animate route polylines drawing themselves on mount
  */
-export function MapView({ polylines = [], stops = [], buses = [], fitKey, className = 'h-[420px]', night = false }) {
+export function MapView({
+  polylines = [],
+  stops = [],
+  buses = [],
+  trails = [],
+  ping = null,
+  fitKey,
+  className = 'h-[420px]',
+  night = false,
+  drawIn = false,
+}) {
+  // drop malformed points so one bad row can never poison Leaflet's
+  // projection (NaN coords render nothing / blow up fitBounds)
+  const safePt = (c) => Array.isArray(c) && Number.isFinite(c[0]) && Number.isFinite(c[1])
+  const lines = polylines.map((p) => ({ ...p, coords: (p.coords || []).filter(safePt) }))
+  const fitPoints = [
+    ...lines.flatMap((p) => p.coords),
+    ...stops.filter((s) => s && Number.isFinite(s.lat) && Number.isFinite(s.lng)).map((s) => [s.lat, s.lng]),
+  ]
+  // SVG renderer (not canvas) so rp-draw / rp-route-hot CSS animation classes apply.
   return (
     <div className={`overflow-hidden rounded-xl border border-edge ${className}`}>
       <MapContainer
@@ -161,7 +190,6 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
         zoom={13}
         scrollWheelZoom
         className="h-full w-full"
-        preferCanvas
       >
         <TileLayer
           attribution='&copy; OpenStreetMap contributors &copy; CARTO'
@@ -172,7 +200,7 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
           }
           maxZoom={18}
         />
-        {polylines.map((p, i) => (
+        {lines.map((p, i) => (
           <Polyline
             key={i}
             positions={p.coords}
@@ -181,9 +209,41 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
               weight: p.weight || 4,
               opacity: p.opacity ?? 0.75,
               dashArray: p.dashArray,
+              className: `${drawIn ? 'rp-draw ' : ''}${p.hot ? 'rp-route-hot' : ''}`.trim() || undefined,
             }}
           />
         ))}
+        {trails
+          .filter((t) => t.points.length >= 2)
+          .map((t) => {
+            const c = STATUS_COLORS[t.status] || '#E4572E'
+            const segs = t.points.length - 1
+            return t.points.slice(1).map((pt, i) => (
+              <Polyline
+                key={`tr-${t.busId}-${i}`}
+                positions={[t.points[i], pt]}
+                interactive={false}
+                pathOptions={{
+                  color: c,
+                  weight: 2.5,
+                  opacity: 0.05 + ((i + 1) / segs) * 0.4,
+                  lineCap: 'round',
+                }}
+              />
+            ))
+          })}
+        {ping && (
+          <Marker
+            key={ping.key}
+            position={[ping.lat, ping.lng]}
+            interactive={false}
+            icon={L.divIcon({
+              className: '',
+              html: '<span class="rp-alert-ping"></span>',
+              iconSize: [0, 0],
+            })}
+          />
+        )}
         {stops.map((s) => (
           <CircleMarker
             key={`${s.stop_name}-${s.stop_order}`}
@@ -219,7 +279,7 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
               </Popup>
             </Marker>
           ))}
-        {fitKey && <FitBounds fitKey={fitKey} />}
+        {fitKey && <FitBounds fitKey={fitKey} points={fitPoints} />}
       </MapContainer>
     </div>
   )

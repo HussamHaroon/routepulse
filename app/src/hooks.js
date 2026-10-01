@@ -163,3 +163,66 @@ export function usePoll(fn, ms, deps = []) {
 
   return { data, error, loading, reload: load }
 }
+
+// Buses glide between GPS fixes instead of teleporting, and each bus leaves a
+// fading comet trail of its recent fixes. The feed still updates at push rate;
+// rendering happens at display rate via requestAnimationFrame.
+export function useSmoothedLocations(locations, { trailLength = 14, glideMs = 2200 } = {}) {
+  const targets = useRef(new Map()) // bus_id -> { from, to, t0, ms, raw }
+  const trails = useRef(new Map()) // bus_id -> [[lat, lng], ...] actual fixes
+  const [smooth, setSmooth] = useState([])
+  const [trailList, setTrailList] = useState([])
+
+  useEffect(() => {
+    const now = Date.now()
+    for (const b of locations) {
+      if (b.lat == null || b.lng == null) continue
+      const prev = targets.current.get(b.bus_id)
+      targets.current.set(b.bus_id, {
+        from: prev ? prev.to : { lat: b.lat, lng: b.lng },
+        to: { lat: b.lat, lng: b.lng },
+        t0: now,
+        ms: glideMs,
+        raw: b,
+      })
+      const tr = trails.current.get(b.bus_id) || []
+      const last = tr[tr.length - 1]
+      if (!last || last[0] !== b.lat || last[1] !== b.lng) {
+        tr.push([b.lat, b.lng])
+        if (tr.length > trailLength) tr.shift()
+        trails.current.set(b.bus_id, tr)
+      }
+    }
+  }, [locations, glideMs, trailLength])
+
+  useEffect(() => {
+    let raf = 0
+    const tick = () => {
+      const now = Date.now()
+      const out = []
+      for (const [busId, t] of targets.current) {
+        if (now - t.t0 > 5 * 60 * 1000) continue // bus gone from the feed
+        const k = Math.min(1, (now - t.t0) / t.ms)
+        const e = 1 - Math.pow(1 - k, 3) // easeOutCubic
+        out.push({
+          ...t.raw,
+          lat: t.from.lat + (t.to.lat - t.from.lat) * e,
+          lng: t.from.lng + (t.to.lng - t.from.lng) * e,
+        })
+      }
+      setSmooth(out)
+      setTrailList(
+        [...trails.current].map(([busId, points]) => ({
+          busId,
+          points,
+          status: targets.current.get(busId)?.raw?.trip_status,
+        }))
+      )
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
+  return { smooth, trails: trailList }
+}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getAlerts, getCrowd, getEtas, getRoute, reportCrowd } from '../api'
-import { useLiveLocations, usePoll, useTick } from '../hooks'
+import { useLiveLocations, usePoll, useSmoothedLocations, useTick } from '../hooks'
 import { useDemo } from '../App'
 import { agoMin, ErrorBanner, LiveBadge, MapView, Mono, RouteChip, Skeleton, StatusChip } from '../components'
 
@@ -130,6 +130,7 @@ export default function Track() {
   const [etas, setEtas] = useState(null)
   const [fetchedAt, setFetchedAt] = useState(0)
   const [etaErr, setEtaErr] = useState(null)
+  const [etaRetry, setEtaRetry] = useState(0)
   useEffect(() => {
     let live = true
     const load = () =>
@@ -147,13 +148,27 @@ export default function Track() {
       live = false
       clearInterval(id)
     }
-  }, [routeId, demo])
+  }, [routeId, demo, etaRetry])
 
   const routeBuses = useMemo(
     () => locations.filter((b) => b.route_id === routeId),
     [locations, routeId]
   )
   const leadBus = routeBuses[0]
+  const { smooth, trails } = useSmoothedLocations(routeBuses)
+
+  // Alert transmission ping — an expanding radar ring fires at the route's
+  // first stop when a WS alert lands, making the two-second round trip visible.
+  const [ping, setPing] = useState(null)
+  useEffect(() => {
+    if (!lastAlert) return
+    if (lastAlert.route_id && String(lastAlert.route_id) !== String(routeId)) return
+    const at = route?.stops?.[0]
+    if (!at) return
+    setPing({ lat: at.lat, lng: at.lng, key: `ping-${lastAlert.alert_id}` })
+    const id = setTimeout(() => setPing(null), 7000)
+    return () => clearTimeout(id)
+  }, [lastAlert, routeId, route])
 
   // crowd report (P1): latest level + send a new one
   const [crowd, setCrowd] = useState(null)
@@ -255,7 +270,10 @@ export default function Track() {
               },
             ]}
             stops={route.stops}
-            buses={routeBuses}
+            buses={smooth}
+            trails={trails}
+            ping={ping}
+            drawIn
             fitKey={routeId}
             className="rp-map45"
           />
@@ -336,7 +354,7 @@ export default function Track() {
           })()}
           {etaErr && (
             <div className="p-3">
-              <ErrorBanner error={etaErr} onRetry={() => setFetchedAt(0)} />
+              <ErrorBanner error={etaErr} onRetry={() => setEtaRetry((n) => n + 1)} />
             </div>
           )}
           {route.stops.map((stop) => {

@@ -90,8 +90,18 @@ export const searchRoutes = (from, to, mock) =>
         return { routes: [] }
       })
 
+// Mock resolvers can throw synchronously (unknown demo id) — route the throw
+// through a rejected promise so callers' .catch() sees it instead of React.
+const mockP = (fn) => {
+  try {
+    return Promise.resolve(fn())
+  } catch (e) {
+    return Promise.reject(e)
+  }
+}
+
 export const getRoute = (id, mock) =>
-  mock ? Promise.resolve(m.mockRouteById(id)) : j(`/api/routes/${encodeURIComponent(id)}`)
+  mock ? mockP(() => m.mockRouteById(id)) : j(`/api/routes/${encodeURIComponent(id)}`)
 
 // Whole network in one call (stops included) — operator map + driver selects.
 export const getNetwork = (mock) =>
@@ -99,7 +109,7 @@ export const getNetwork = (mock) =>
 
 export const getEtas = (id, mock, busId) =>
   mock
-    ? Promise.resolve(m.mockEtas(id))
+    ? mockP(() => m.mockEtas(id))
     : j(`/api/routes/${encodeURIComponent(id)}/etas${busId ? qs({ bus_id: busId }) : ''}`)
 
 export const getLocations = (mock) =>

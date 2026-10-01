@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   getAlerts,
@@ -10,7 +10,7 @@ import {
   publishAlert,
 } from '../api'
 import { ROUTES, routeNumber } from '../mock'
-import { useLiveLocations, usePoll } from '../hooks'
+import { useLiveLocations, usePoll, useSmoothedLocations } from '../hooks'
 import { useDemo } from '../App'
 import {
   ErrorBanner,
@@ -50,6 +50,19 @@ export default function Operator() {
   const rhythm = usePoll(() => getDelayPatterns(demo), 60000, [demo])
   const accuracy = usePoll(() => getEtaAccuracy(demo), 60000, [demo])
   const ROUTE_SET = net.data?.routes?.length ? net.data.routes : ROUTES
+  const { smooth, trails } = useSmoothedLocations(locations)
+
+  // Delay heat: any route whose worst bus runs ≥5 min late glows on the map.
+  const hotRoutes = useMemo(() => {
+    const worst = {}
+    for (const b of locations) {
+      if (b.route_id && b.delay_minutes > 0)
+        worst[b.route_id] = Math.max(worst[b.route_id] || 0, b.delay_minutes)
+    }
+    return new Set(
+      Object.keys(worst).filter((r) => worst[r] >= 5).map(String)
+    )
+  }, [locations])
 
   // alert publisher state
   const [alertRoute, setAlertRoute] = useState('ALL')
@@ -81,12 +94,16 @@ export default function Operator() {
     return d?.name || '—'
   }
 
-  const allCoords = ROUTE_SET.map((r) => ({
-    coords: r.stops.map((s) => [s.lat, s.lng]),
-    color: ROUTE_COLORS[r.route_id] || '#2E7D4F',
-    weight: 2,
-    opacity: 0.35,
-  }))
+  const allCoords = ROUTE_SET.map((r) => {
+    const hot = hotRoutes.has(String(r.route_id))
+    return {
+      coords: r.stops.map((s) => [s.lat, s.lng]),
+      color: ROUTE_COLORS[r.route_id] || '#2E7D4F',
+      weight: hot ? 5 : 2,
+      opacity: hot ? 0.95 : 0.35,
+      hot,
+    }
+  })
   const allStops = ROUTE_SET.flatMap((r) =>
     r.stops.map((s) => ({ ...s, stop_name: `${routeNumber(r)}·${s.stop_name}` }))
   )
@@ -136,8 +153,10 @@ export default function Operator() {
           night
           polylines={allCoords}
           stops={allStops}
-          buses={locations}
-          fitKey={`fleet-${demo}`}
+          buses={smooth}
+          trails={trails}
+          drawIn
+          fitKey={`fleet-${demo}-${ROUTE_SET.map((r) => r.route_id).join('_')}`}
           className="rp-map45"
         />
 
@@ -239,7 +258,7 @@ export default function Operator() {
                     className="w-10 shrink-0 pt-0.5 font-mono text-xs font-bold"
                     style={{ color: ROUTE_COLORS[p.route_id] || '#8B98A5' }}
                   >
-                    R{String(p.route_id).replace('R', '')}
+                    {String(p.route_id).replace('R', '')}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-3">
@@ -338,7 +357,9 @@ export default function Operator() {
                   >
                     {b.delay_minutes > 0 ? `+${b.delay_minutes}m` : '0m'}
                   </td>
-                  <td className="px-4 py-3 text-fog">{b.speed} km/h</td>
+                  <td className="px-4 py-3 text-fog">
+                    {b.speed != null ? `${Number(b.speed).toFixed(1)} km/h` : '—'}
+                  </td>
                   <td className="max-w-[160px] truncate px-4 py-3 text-fog">
                     {b.next_stop || '—'}
                   </td>
