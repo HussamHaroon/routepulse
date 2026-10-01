@@ -17,7 +17,8 @@
     "sim:slow": "node simulator/sim.js --speed=16",
     "sim:bus": "node simulator/sim.js --bus=B-07",
     "dev": "concurrently -k -n api,sim -c blue,green \"node api/server.js\" \"node simulator/sim.js\"",
-    "test": "node --test tests/api.test.mjs"
+    "test": "node --test tests/api.test.mjs",
+    "build": "npm install --prefix app && npm run build --prefix app"
   },
   "dependencies": {
     "better-sqlite3": "^12.2.0",
