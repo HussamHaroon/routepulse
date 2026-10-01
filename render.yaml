@@ -3,6 +3,6 @@ services:
     name: routepulse
     env: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install && cd app && npm install && npm run build
     startCommand: SIMULATE=1 node api/server.js
     healthCheckPath: /api/health
