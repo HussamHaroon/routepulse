@@ -75,144 +75,170 @@ CREATE TABLE IF NOT EXISTS alert (
   }
 }
 
+// REAL Lahore landmarks (approx public coords, good enough for map display)
+const LANDMARKS = {
+  'Data Darbar': [31.5869, 74.3095],
+  'Minar-e-Pakistan': [31.5928, 74.3079],
+  'Azadi Chowk': [31.6186, 74.3123],
+  'Bhati Chowk': [31.5854, 74.3190],
+  'Badami Bagh': [31.5990, 74.3180],
+  'Railway Station': [31.5703, 74.3330],
+  'Lakshmi Chowk': [31.5620, 74.3360],
+  'Charing Cross': [31.5590, 74.3250],
+  'Chauburji': [31.5480, 74.3230],
+  'Kalma Chowk': [31.5255, 74.3436],
+  'Model Town': [31.5140, 74.3330],
+  'Liberty Market': [31.5330, 74.3380],
+  'Gulberg Main Blvd': [31.5340, 74.3460],
+  'Lahore Cantt': [31.5460, 74.3520],
+  'Allama Iqbal Airport': [31.5210, 74.4036],
+  'Thokar Niaz Baig': [31.5160, 74.2970],
+  'Punjab University Gate': [31.5650, 74.3070],
+  'Peco Mor': [31.5490, 74.3650],
+  'Ghazi Road': [31.5430, 74.3820],
+};
+
+// Stop-order helpers — build a route from landmark names in corridor order.
+const L = (name) => {
+  const lm = LANDMARKS[name];
+  if (!lm) throw new Error(`[db] unknown landmark: ${name}`);
+  return [name, lm[0], lm[1]];
+};
+
 const ROUTES = [
-  // [route] stops: [name, lat, lng] — Lahore coords (31.52–31.58 / 74.29–74.40)
-  {
-    route_id: '7',
-    route_name: 'City Center → University Gate',
-    start_location: 'City Center',
-    destination: 'University Gate',
-    estimated_duration_min: 35,
-    fare_pkr: 25,
-    stops: [
-      ['City Center', 31.5582, 74.3507],
-      ['Shimla Pahar', 31.562, 74.342],
-      ['Railway Station', 31.5703, 74.333],
-      ['Civil Area', 31.568, 74.322],
-      ['Data Nagar', 31.565, 74.314],
-      ['University Gate', 31.5645, 74.3075],
-    ],
-  },
-  {
-    route_id: '5',
-    route_name: 'Central Station → Bus Terminal',
-    start_location: 'Central Station',
-    destination: 'Bus Terminal',
-    estimated_duration_min: 42,
-    fare_pkr: 40,
-    stops: [
-      ['Central Station', 31.572, 74.352],
-      ['Lakshmi Chowk', 31.565, 74.344],
-      ['Main Market', 31.556, 74.34],
-      ['Civil Lines', 31.548, 74.332],
-      ['Model Town Link', 31.538, 74.326],
-      ['Bus Terminal', 31.529, 74.318],
-    ],
-  },
-  {
-    route_id: '3',
-    route_name: 'Airport → City Center',
-    start_location: 'Airport',
-    destination: 'City Center',
-    estimated_duration_min: 48,
-    fare_pkr: 50,
-    stops: [
-      ['Airport', 31.521, 74.403],
-      ['Cohsala', 31.532, 74.387],
-      ['Ghazi Road', 31.543, 74.374],
-      ['Peco Mor', 31.551, 74.363],
-      ['Islampura', 31.556, 74.356],
-      ['City Center', 31.5582, 74.3507],
-    ],
-  },
-  {
-    route_id: '9',
-    route_name: 'City Center → University Gate Express',
-    start_location: 'City Center',
-    destination: 'University Gate',
-    estimated_duration_min: 30,
-    fare_pkr: 35,
-    stops: [
-      ['City Center', 31.5582, 74.3507],
-      ['Canal Bank', 31.554, 74.338],
-      ['Chauburji', 31.546, 74.318],
-      ['Multan Chungi', 31.552, 74.312],
-      ['Campus Gate', 31.559, 74.309],
-      ['University Gate', 31.5645, 74.3075],
-    ],
-  },
-  // --- WP2 additions: 4 new routes (~40 stops network-wide) ---
   {
     route_id: '1',
-    route_name: 'Airport → Bus Terminal',
-    start_location: 'Airport',
-    destination: 'Bus Terminal',
-    estimated_duration_min: 58,
-    fare_pkr: 60,
+    route_name: 'Shahdara → Kalma Chowk',
+    start_location: 'Minar-e-Pakistan',
+    destination: 'Kalma Chowk',
+    estimated_duration_min: 55,
+    fare_pkr: 40,
     stops: [
-      ['Airport', 31.521, 74.403],
-      ['Cohsala', 31.532, 74.387],
-      ['Ghazi Road', 31.543, 74.374],
-      ['Kot Lakhpat', 31.535, 74.346],
-      ['Model Town', 31.53, 74.329],
-      ['Bus Terminal', 31.529, 74.318],
+      L('Minar-e-Pakistan'),
+      L('Azadi Chowk'),
+      L('Bhati Chowk'),
+      L('Data Darbar'),
+      L('Lakshmi Chowk'),
+      L('Chauburji'),
+      L('Kalma Chowk'),
     ],
   },
   {
     route_id: '2',
-    route_name: 'Railway Station → Main Market',
-    start_location: 'Railway Station',
-    destination: 'Main Market',
-    estimated_duration_min: 25,
-    fare_pkr: 20,
+    route_name: 'Airport → City Center',
+    start_location: 'Allama Iqbal Airport',
+    destination: 'Bhati Chowk',
+    estimated_duration_min: 48,
+    fare_pkr: 50,
     stops: [
-      ['Railway Station', 31.5703, 74.333],
-      ['Bhatti Chowk', 31.568, 74.338],
-      ['Lakshmi Chowk', 31.565, 74.344],
-      ['Nila Gumbad', 31.56, 74.342],
-      ['Main Market', 31.556, 74.34],
+      L('Allama Iqbal Airport'),
+      L('Ghazi Road'),
+      L('Peco Mor'),
+      L('Lahore Cantt'),
+      L('Lakshmi Chowk'),
+      L('Bhati Chowk'),
+    ],
+  },
+  {
+    route_id: '3',
+    route_name: 'Railway Station → Liberty Market',
+    start_location: 'Railway Station',
+    destination: 'Liberty Market',
+    estimated_duration_min: 42,
+    fare_pkr: 35,
+    stops: [
+      L('Railway Station'),
+      L('Data Darbar'),
+      L('Charing Cross'),
+      L('Gulberg Main Blvd'),
+      L('Liberty Market'),
+    ],
+  },
+  {
+    route_id: '4',
+    route_name: 'University Gate → Model Town',
+    start_location: 'Punjab University Gate',
+    destination: 'Model Town',
+    estimated_duration_min: 28,
+    fare_pkr: 25,
+    stops: [
+      L('Punjab University Gate'),
+      L('Chauburji'),
+      L('Kalma Chowk'),
+      L('Model Town'),
+    ],
+  },
+  {
+    route_id: '5',
+    route_name: 'Airport → Badami Bagh',
+    start_location: 'Allama Iqbal Airport',
+    destination: 'Badami Bagh',
+    estimated_duration_min: 45,
+    fare_pkr: 45,
+    stops: [
+      L('Allama Iqbal Airport'),
+      L('Ghazi Road'),
+      L('Lahore Cantt'),
+      L('Lakshmi Chowk'),
+      L('Badami Bagh'),
     ],
   },
   {
     route_id: '6',
-    route_name: 'Canal → City Center',
+    route_name: 'Thokar Niaz Baig → City Center',
     start_location: 'Thokar Niaz Baig',
-    destination: 'City Center',
-    estimated_duration_min: 38,
-    fare_pkr: 30,
+    destination: 'Bhati Chowk',
+    estimated_duration_min: 52,
+    fare_pkr: 40,
     stops: [
-      ['Thokar Niaz Baig', 31.533, 74.312],
-      ['Canal Side', 31.544, 74.325],
-      ['Canal Bank', 31.554, 74.338],
-      ['Shadman', 31.559, 74.345],
-      ['City Center', 31.5582, 74.3507],
+      L('Thokar Niaz Baig'),
+      L('Model Town'),
+      L('Kalma Chowk'),
+      L('Chauburji'),
+      L('Lakshmi Chowk'),
+      L('Bhati Chowk'),
     ],
   },
   {
-    route_id: '12',
-    route_name: 'University Gate → Main Market',
-    start_location: 'University Gate',
-    destination: 'Main Market',
-    estimated_duration_min: 36,
-    fare_pkr: 30,
+    route_id: '7',
+    route_name: 'Bhati Chowk → Punjab University Gate',
+    start_location: 'Bhati Chowk',
+    destination: 'Punjab University Gate',
+    estimated_duration_min: 30,
+    fare_pkr: 20,
     stops: [
-      ['University Gate', 31.5645, 74.3075],
-      ['Campus Gate', 31.559, 74.309],
-      ['Muslim Town', 31.553, 74.317],
-      ['Civil Lines', 31.548, 74.332],
-      ['Main Market', 31.556, 74.34],
+      L('Bhati Chowk'),
+      L('Data Darbar'),
+      L('Charing Cross'),
+      L('Punjab University Gate'),
+    ],
+  },
+  {
+    route_id: '8',
+    route_name: 'Railway Station → Liberty Market Express',
+    start_location: 'Railway Station',
+    destination: 'Liberty Market',
+    estimated_duration_min: 32,
+    fare_pkr: 60,
+    stops: [
+      L('Railway Station'),
+      L('Lakshmi Chowk'),
+      L('Gulberg Main Blvd'),
+      L('Liberty Market'),
     ],
   },
 ];
 
 const BUSES = [
   // [bus_id, vehicle_number, capacity, driver_id, route_id, status]
-  ['B-07', 'LEA-3147', 42, 'D-01', '7', 'On Route'],
-  ['B-14', 'LEB-8852', 42, 'D-02', '5', 'Delayed'],
-  ['B-03', 'LEC-2043', 36, 'D-03', '3', 'On Route'],
-  ['B-09', 'LED-7719', 36, 'D-04', '9', 'On Route'],
-  ['B-21', 'LEE-5561', 42, null, null, 'Available'],
-  ['B-32', 'LEF-9330', 42, null, null, 'Break'],
+  ['B-07', 'LEA-3147', 42, 'D-01', '1', 'On Route'],
+  ['B-14', 'LEB-8852', 42, 'D-02', '3', 'Delayed'],
+  ['B-03', 'LEC-2043', 36, 'D-03', '2', 'On Route'],
+  ['B-09', 'LED-7719', 36, 'D-04', '7', 'On Route'],
+  ['B-21', 'LEE-5561', 42, 'D-05', '6', 'On Route'],
+  ['B-32', 'LEF-9330', 42, 'D-06', '8', 'On Route'],
+  ['B-05', 'LEG-2274', 36, 'D-07', '4', 'On Route'],
+  ['B-11', 'LEH-6602', 36, null, null, 'Available'],
 ];
 
 const DRIVERS = [
@@ -221,7 +247,9 @@ const DRIVERS = [
   ['D-02', 'Muneeb', '+92-301-2345678', 'B-14', 'On Route'],
   ['D-03', 'Prithvi', '+92-302-3456789', 'B-03', 'On Route'],
   ['D-04', 'Aslam', '+92-303-4567890', 'B-09', 'On Route'],
-  ['D-05', 'Zafar', '+92-304-5678901', null, 'Available'],
+  ['D-05', 'Zafar', '+92-304-5678901', 'B-21', 'On Route'],
+  ['D-06', 'Rizwan', '+92-305-6789012', 'B-32', 'On Route'],
+  ['D-07', 'Naveed', '+92-306-7890123', 'B-05', 'On Route'],
 ];
 
 /** Routes/stops seed — idempotent (INSERT OR IGNORE), so existing DBs grow into
@@ -277,14 +305,15 @@ function seedFleetOnce() {
     const insAlert = db.prepare(
       'INSERT INTO alert (route_id, message, created_at, active) VALUES (?,?,?,?)'
     );
-    // Matches the frontend mock. Route 5 is actively delayed; "Bus 14 ended
-    // trip" is historical (active=0).
-    insAlert.run('5', 'Route 5 delayed ~15 min — accident near Main Market', iso(25 * 60 * 1000), 1);
-    insAlert.run(null, 'Stop 7 temporarily unavailable — road closure', iso(40 * 60 * 1000), 1);
-    insAlert.run(null, 'Bus 14 ended trip — vehicle issue', iso(90 * 60 * 1000), 0);
+    // Realistic Lahore service alerts. Route 3 (B-14) is actively delayed;
+    // "ended trip" is historical (active=0).
+    insAlert.run('3', 'Route 3 delayed ~15 min — traffic jam on Ferozepur Road near Charing Cross', iso(25 * 60 * 1000), 1);
+    insAlert.run(null, 'Bhati Chowk stop temporarily shifted 100 m — road maintenance', iso(40 * 60 * 1000), 1);
+    insAlert.run('1', 'Route 1 diversion via Lakshmi Chowk due to procession near Data Darbar', iso(90 * 60 * 1000), 1);
+    insAlert.run(null, 'Bus 14 ended trip — vehicle issue', iso(200 * 60 * 1000), 0);
   });
   seed();
-  console.log('[db] seeded fleet: 6 buses, 5 drivers, 3 alerts');
+  console.log('[db] seeded fleet: 8 buses, 7 drivers, 4 alerts');
 }
 
 /** Create the 4 initial "On Route" trips (once) so the simulator has work. */

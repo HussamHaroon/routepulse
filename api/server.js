@@ -736,7 +736,7 @@ loadLiveState();
 
 // WP2: seed a few crowd levels so the UI shows data before the first report.
 const crowdBootIso = new Date().toISOString();
-for (const [rid, lvl] of [['7', 'seats'], ['5', 'packed'], ['3', 'seats'], ['9', 'empty']]) {
+for (const [rid, lvl] of [['1', 'seats'], ['3', 'packed'], ['2', 'seats'], ['4', 'empty'], ['6', 'seats'], ['8', 'empty']]) {
   crowdByRoute.set(rid, { level: lvl, updated_at: crowdBootIso });
 }
 
