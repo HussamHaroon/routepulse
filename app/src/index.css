@@ -381,7 +381,8 @@ h3 {
   color: var(--color-snow);
 }
 .night .leaflet-tile {
-  filter: brightness(2.1) contrast(0.88) saturate(0.85);
+  /* dimmed Voyager — lift-from-black can't rescue a near-black basemap; dim-from-light can */
+  filter: grayscale(0.82) brightness(0.72) contrast(0.95);
 }
 .night .leaflet-container {
   background: #20262e;

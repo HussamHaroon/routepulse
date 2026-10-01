@@ -195,7 +195,7 @@ export function MapView({
           attribution='&copy; OpenStreetMap contributors &copy; CARTO'
           url={
             night
-              ? `https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`
+              ? `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`
               : `https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CARTO_KEY}`
           }
           maxZoom={18}
