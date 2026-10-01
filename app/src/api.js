@@ -133,6 +133,10 @@ export const getDelayPatterns = (mock) =>
 export const getEtaAccuracy = (mock) =>
   mock ? Promise.resolve(null) : j('/api/analytics/eta-accuracy')
 
+// Real-world Lahore conditions — live weather + smog (Open-Meteo, no key).
+export const getConditions = (mock) =>
+  mock ? Promise.resolve(null) : j('/api/conditions')
+
 export const getStats = (mock) =>
   mock ? Promise.resolve(m.mockStats()) : j('/api/stats')
 

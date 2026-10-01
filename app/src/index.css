@@ -189,9 +189,11 @@ h3 {
   border-radius: 9999px;
   background: #2e7d4f;
   border: 2px solid #f4efe4;
+  /* white ring + ink halo + drop shadow — reads on any basemap */
   box-shadow:
-    0 0 0 1.5px rgba(33, 29, 22, 0.55),
-    0 1px 6px rgba(33, 29, 22, 0.35);
+    0 0 0 2px rgba(255, 255, 255, 0.9),
+    0 0 0 3.5px rgba(33, 29, 22, 0.35),
+    0 3px 10px rgba(18, 20, 23, 0.45);
   position: relative;
 }
 .rp-bus::after {
@@ -287,6 +289,62 @@ h3 {
 /* ---------- Pexels media sits in the paper register ---------- */
 .rp-warm {
   filter: sepia(12%) contrast(1.02);
+}
+
+/* ---------- film grain / paper texture ----------
+   feTurbulence noise tile, baked into a data URI so it costs one
+   request. .rp-grain prints it over paper sections; .rp-grain-overlay
+   is the absolute-positioned variant for hero / video scrims. */
+.rp-grain {
+  position: relative;
+}
+.rp-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.04;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+.rp-grain-overlay {
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* ---------- cinematic hero: warm grade + vignette ---------- */
+.rp-hero-grade {
+  filter: sepia(0.14) saturate(1.05) contrast(1.04) brightness(0.96);
+}
+.rp-vignette {
+  background: radial-gradient(
+    ellipse 120% 90% at 50% 42%,
+    transparent 52%,
+    rgba(18, 20, 23, 0.42) 100%
+  );
+}
+
+/* ---------- route postcards: lift + slow photo push-in ---------- */
+.rp-card {
+  transition:
+    transform 0.55s var(--ease-house),
+    box-shadow 0.55s var(--ease-house),
+    border-color 0.55s var(--ease-house);
+}
+.rp-card:hover {
+  transform: translateY(-5px);
+  border-color: #c8bfa8;
+  box-shadow: 0 22px 44px -20px rgba(33, 29, 22, 0.4);
+}
+.rp-card-img {
+  transition: transform 1.1s var(--ease-house);
+}
+.rp-card:hover .rp-card-img {
+  transform: scale(1.05);
 }
 
 /* ---------- destination roll ---------- */

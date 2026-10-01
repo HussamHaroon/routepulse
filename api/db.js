@@ -244,6 +244,7 @@ const ROUTES = [
 
 const BUSES = [
   // [bus_id, vehicle_number, capacity, driver_id, route_id, status]
+  // 3 buses per route — a believable mid-size Lahore operator.
   ['B-07', 'LEA-3147', 42, 'D-01', '1', 'On Route'],
   ['B-14', 'LEB-8852', 42, 'D-02', '3', 'Delayed'],
   ['B-03', 'LEC-2043', 36, 'D-03', '2', 'On Route'],
@@ -251,7 +252,23 @@ const BUSES = [
   ['B-21', 'LEE-5561', 42, 'D-05', '6', 'On Route'],
   ['B-32', 'LEF-9330', 42, 'D-06', '8', 'On Route'],
   ['B-05', 'LEG-2274', 36, 'D-07', '4', 'On Route'],
-  ['B-11', 'LEH-6602', 36, null, null, 'Available'],
+  ['B-08', 'LEA-2291', 42, 'D-08', '1', 'On Route'],
+  ['B-12', 'LEB-4418', 42, 'D-09', '3', 'On Route'],
+  ['B-16', 'LEC-7702', 36, 'D-10', '2', 'On Route'],
+  ['B-19', 'LED-3345', 36, 'D-11', '7', 'On Route'],
+  ['B-23', 'LEE-8823', 42, 'D-12', '6', 'On Route'],
+  ['B-27', 'LEF-6612', 42, 'D-13', '8', 'On Route'],
+  ['B-31', 'LEG-1129', 36, 'D-14', '4', 'On Route'],
+  ['B-02', 'LEH-9903', 42, 'D-15', '1', 'On Route'],
+  ['B-10', 'LEA-8876', 42, 'D-16', '3', 'On Route'],
+  ['B-15', 'LEB-2029', 36, 'D-17', '2', 'On Route'],
+  ['B-20', 'LEC-5560', 36, 'D-18', '7', 'On Route'],
+  ['B-24', 'LED-9117', 42, 'D-19', '6', 'On Route'],
+  ['B-28', 'LEE-3352', 42, 'D-20', '8', 'On Route'],
+  ['B-30', 'LEF-4488', 36, 'D-21', '4', 'On Route'],
+  ['B-33', 'LEG-7745', 42, 'D-22', '1', 'On Route'],
+  ['B-36', 'LEH-2260', 36, 'D-23', '6', 'Available'],
+  ['B-40', 'LEA-6634', 36, 'D-24', null, 'Available'],
 ];
 
 const DRIVERS = [
@@ -263,6 +280,23 @@ const DRIVERS = [
   ['D-05', 'Zafar', '+92-304-5678901', 'B-21', 'On Route'],
   ['D-06', 'Rizwan', '+92-305-6789012', 'B-32', 'On Route'],
   ['D-07', 'Naveed', '+92-306-7890123', 'B-05', 'On Route'],
+  ['D-08', 'Imran', '+92-307-1122334', 'B-08', 'On Route'],
+  ['D-09', 'Kashif', '+92-308-2233445', 'B-12', 'On Route'],
+  ['D-10', 'Tariq', '+92-309-3344556', 'B-16', 'On Route'],
+  ['D-11', 'Shahid', '+92-310-4455667', 'B-19', 'On Route'],
+  ['D-12', 'Waqar', '+92-311-5566778', 'B-23', 'On Route'],
+  ['D-13', 'Bilal', '+92-312-6677889', 'B-27', 'On Route'],
+  ['D-14', 'Adnan', '+92-313-7788990', 'B-31', 'On Route'],
+  ['D-15', 'Usman', '+92-314-8899001', 'B-02', 'On Route'],
+  ['D-16', 'Hamza', '+92-315-9900112', 'B-10', 'On Route'],
+  ['D-17', 'Faisal', '+92-316-1011223', 'B-15', 'On Route'],
+  ['D-18', 'Salman', '+92-317-2122334', 'B-20', 'On Route'],
+  ['D-19', 'Adeel', '+92-318-3233445', 'B-24', 'On Route'],
+  ['D-20', 'Noman', '+92-319-4344556', 'B-28', 'On Route'],
+  ['D-21', 'Junaid', '+92-320-5455667', 'B-30', 'On Route'],
+  ['D-22', 'Owais', '+92-321-6566778', 'B-33', 'On Route'],
+  ['D-23', 'Rehan', '+92-322-7677889', 'B-36', 'Available'],
+  ['D-24', 'Sohail', '+92-323-8788990', 'B-40', 'Available'],
 ];
 
 /** Routes/stops seed — idempotent (INSERT OR IGNORE), so existing DBs grow into
@@ -326,7 +360,7 @@ function seedFleetOnce() {
     insAlert.run(null, 'Bus 14 ended trip — vehicle issue', iso(200 * 60 * 1000), 0);
   });
   seed();
-  console.log('[db] seeded fleet: 8 buses, 7 drivers, 4 alerts');
+  console.log('[db] seeded fleet: 24 buses, 24 drivers, 4 alerts');
 }
 
 /** Create the 4 initial "On Route" trips (once) so the simulator has work. */

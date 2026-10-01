@@ -66,13 +66,28 @@ const crowdByRoute = new Map(); // route_id -> { level, updated_at }
 const CROWD_LEVELS = ['empty', 'seats', 'packed'];
 const crowdOf = (routeId) => crowdByRoute.get(routeId)?.level ?? null;
 
+// Real road geometry per route (snapped via OSRM against OSM Lahore — see
+// scripts/snap_routes.mjs). Falls back to straight stop-to-stop lines if the
+// file is missing or a route is absent (e.g. newly seeded route).
+const ROAD_ROUTES = (() => {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(__dirname, 'road_routes.json'), 'utf8'));
+  } catch {
+    return {};
+  }
+})();
+
 function getRouteContext(routeId) {
   let ctx = routeCtx.get(routeId);
   if (!ctx) {
     const stops = db
       .prepare('SELECT * FROM stop WHERE route_id = ? ORDER BY stop_order')
       .all(routeId);
-    ctx = { stops, poly: buildPolyline(stops) };
+    const road = ROAD_ROUTES[String(routeId)];
+    const poly = road?.coords?.length
+      ? buildPolyline(road.coords.map(([lat, lng]) => ({ lat, lng })))
+      : buildPolyline(stops);
+    ctx = { stops, poly, road_km: road?.distance_km ?? null, road_coords: road?.coords ?? null };
     routeCtx.set(routeId, ctx);
   }
   return ctx;
@@ -314,7 +329,12 @@ app.get('/api/routes', (req, res) => {
     return res.json({
       routes: allRoutes.map((r) => ({
         ...r,
-        ...(withStops ? { stops: stopsByRoute.all(r.route_id) } : {}),
+        ...(withStops
+          ? {
+              stops: stopsByRoute.all(r.route_id),
+              road_polyline: getRouteContext(r.route_id).road_coords ?? undefined,
+            }
+          : {}),
         crowd: crowdOf(r.route_id),
       })),
     });
@@ -392,7 +412,14 @@ app.get('/api/routes/:id', (req, res) => {
   const stops = db
     .prepare('SELECT stop_id, stop_name, lat, lng, stop_order FROM stop WHERE route_id = ? ORDER BY stop_order')
     .all(r.route_id);
-  res.json({ ...r, stops, crowd: crowdOf(r.route_id) });
+  const ctx = getRouteContext(r.route_id);
+  res.json({
+    ...r,
+    stops,
+    crowd: crowdOf(r.route_id),
+    road_polyline: ctx.road_coords ?? undefined,
+    road_km: ctx.road_km ?? undefined,
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -845,6 +872,65 @@ app.post('/api/trips/:id/end', (req, res) => {
   broadcast({ type: 'trip_ended', bus_id: trip.bus_id, trip_id: tripId, route_id: trip.route_id });
   const updated = db.prepare('SELECT * FROM trip WHERE trip_id = ?').get(tripId);
   res.json({ ok: true, trip: updated });
+});
+
+// ---------------------------------------------------------------------------
+// Real-world conditions — live Lahore weather + air quality (Open-Meteo, no
+// key required, 10-minute in-memory cache). Gives the control room a genuine
+// "why is traffic like this today" read: heat, rain, and the famous smog.
+// ---------------------------------------------------------------------------
+let conditionsCache = { at: 0, data: null };
+const LAHORE = { lat: 31.5497, lng: 74.3436 };
+
+function aqiVerdict(aqi, pm25) {
+  const score = aqi ?? (pm25 != null ? Math.round(pm25 * 2.2) : null);
+  if (score == null) return null;
+  if (score >= 301) return { band: 'HAZARDOUS', note: 'smog hazardous — service at risk, advisories likely' };
+  if (score >= 201) return { band: 'VERY UNHEALTHY', note: 'smog very unhealthy — expect heavy delays' };
+  if (score >= 151) return { band: 'UNHEALTHY', note: 'smog unhealthy — buses crawling on corridors' };
+  if (score >= 101) return { band: 'UNHEALTHY FOR SENSITIVE', note: 'haze unhealthy for sensitive groups' };
+  if (score >= 51) return { band: 'MODERATE', note: 'moderate haze — normal service' };
+  return { band: 'GOOD', note: 'clear air — rare and beautiful' };
+}
+
+app.get('/api/conditions', async (_req, res) => {
+  if (Date.now() - conditionsCache.at < 10 * 60 * 1000 && conditionsCache.data) {
+    return res.json(conditionsCache.data);
+  }
+  try {
+    const wxUrl =
+      `https://api.open-meteo.com/v1/forecast?latitude=${LAHORE.lat}&longitude=${LAHORE.lng}` +
+      '&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m';
+    const aqUrl =
+      `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${LAHORE.lat}&longitude=${LAHORE.lng}` +
+      '&current=pm2_5,us_aqi';
+    const [wxRes, aqRes] = await Promise.all([
+      fetch(wxUrl, { signal: AbortSignal.timeout(8000) }),
+      fetch(aqUrl, { signal: AbortSignal.timeout(8000) }),
+    ]);
+    const wx = await wxRes.json();
+    const aq = await aqRes.json().catch(() => ({}));
+    const cur = wx.current ?? {};
+    const aqCur = aq.current ?? {};
+    const pm25 = aqCur.pm2_5 != null ? Math.round(aqCur.pm2_5) : null;
+    const data = {
+      city: 'Lahore',
+      temperature_c: cur.temperature_2m != null ? Math.round(cur.temperature_2m) : null,
+      humidity: cur.relative_humidity_2m ?? null,
+      wind_kmh: cur.wind_speed_10m != null ? Math.round(cur.wind_speed_10m) : null,
+      weather_code: cur.weather_code ?? null,
+      pm2_5: pm25,
+      us_aqi: aqCur.us_aqi != null ? Math.round(aqCur.us_aqi) : null,
+      verdict: aqiVerdict(aqCur.us_aqi != null ? Math.round(aqCur.us_aqi) : null, pm25),
+      observed_at: new Date().toISOString(),
+      source: 'open-meteo.com (real observations)',
+    };
+    conditionsCache = { at: Date.now(), data };
+    res.json(data);
+  } catch (e) {
+    if (conditionsCache.data) return res.json({ ...conditionsCache.data, stale: true });
+    res.status(502).json({ error: 'conditions unavailable', detail: e.message });
+  }
 });
 
 // ---------------------------------------------------------------------------

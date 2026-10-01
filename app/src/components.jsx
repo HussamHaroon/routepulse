@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import L from 'leaflet'
 import {
   MapContainer,
@@ -173,6 +173,38 @@ function FitBounds({ fitKey, points = [] }) {
   return null
 }
 
+// CameraFlyTo — pans the map when the `flyTo` prop changes to a new
+// [lat, lng] pair. A ~1.4s flight with low easeLinearity approximates the
+// house easing feel (Leaflet exposes no custom bezier). flyTo=null (the
+// default) is a no-op, so existing callers keep their behavior; a ref
+// guards against re-flying when the caller passes a fresh-but-equal array.
+function CameraFlyTo({ flyTo }) {
+  const map = useMap()
+  const lastRef = useRef(null)
+  useEffect(() => {
+    const target =
+      Array.isArray(flyTo) &&
+      flyTo.length >= 2 &&
+      Number.isFinite(flyTo[0]) &&
+      Number.isFinite(flyTo[1])
+        ? flyTo
+        : null
+    if (!target) return
+    const prev = lastRef.current
+    if (prev && prev[0] === target[0] && prev[1] === target[1]) return
+    lastRef.current = target
+    try {
+      map.flyTo([target[0], target[1]], Math.max(map.getZoom(), 14), {
+        duration: 1.4,
+        easeLinearity: 0.22,
+      })
+    } catch {
+      /* bad coords — hold the current view */
+    }
+  }, [flyTo, map])
+  return null
+}
+
 /**
  * MapView — CARTO basemap (Dark Matter at night, Positron (light_all) by day —
  * no tint/filter applied), route polylines, stop markers, pulsing bus dots.
@@ -182,6 +214,8 @@ function FitBounds({ fitKey, points = [] }) {
  * trails:    [{ busId, points: [[lat,lng]...], status? }] — fading comet trails
  * ping:      { lat, lng, key } — expanding radar ring for a live service alert
  * drawIn:    animate route polylines drawing themselves on mount
+ * flyTo:     [lat, lng] | null — camera flies to this point (1.4s, house-feel
+ *            easing); null keeps the default view (backwards compatible)
  */
 export function MapView({
   polylines = [],
@@ -193,6 +227,7 @@ export function MapView({
   className = 'h-[420px]',
   night = false,
   drawIn = false,
+  flyTo = null,
 }) {
   // drop malformed points so one bad row can never poison Leaflet's
   // projection (NaN coords render nothing / blow up fitBounds)
@@ -300,6 +335,7 @@ export function MapView({
             </Marker>
           ))}
         {fitKey && <FitBounds fitKey={fitKey} points={fitPoints} />}
+        {flyTo && <CameraFlyTo flyTo={flyTo} />}
       </MapContainer>
     </div>
   )

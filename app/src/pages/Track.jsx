@@ -199,8 +199,12 @@ export default function Track() {
       .catch(() => {})
   }
 
+  // Prefer the real road geometry (OSRM-snapped via OSM); fall back to
+  // straight stop-to-stop lines when the road data is unavailable.
   const coords = useMemo(
-    () => route?.stops?.map((s) => [s.lat, s.lng]) ?? [],
+    () => route?.road_polyline?.length
+      ? route.road_polyline
+      : route?.stops?.map((s) => [s.lat, s.lng]) ?? [],
     [route]
   )
 
@@ -327,6 +331,8 @@ export default function Track() {
               {
                 coords,
                 color: leadBus?.trip_status === 'Delayed' ? '#FF4757' : '#2ECC71',
+                weight: 3.5,
+                opacity: 0.9,
               },
             ]}
             stops={route.stops}

@@ -4,6 +4,7 @@ import {
   getAlerts,
   getDelayPatterns,
   getDrivers,
+  getConditions,
   getEtaAccuracy,
   getNetwork,
   getStats,
@@ -49,6 +50,7 @@ export default function Operator() {
   const net = usePoll(() => getNetwork(demo), 30000, [demo])
   const rhythm = usePoll(() => getDelayPatterns(demo), 60000, [demo])
   const accuracy = usePoll(() => getEtaAccuracy(demo), 60000, [demo])
+  const conditions = usePoll(() => getConditions(demo), 600000, [demo])
   const ROUTE_SET = net.data?.routes?.length ? net.data.routes : ROUTES
   const { smooth, trails } = useSmoothedLocations(locations)
 
@@ -97,7 +99,9 @@ export default function Operator() {
   const allCoords = ROUTE_SET.map((r) => {
     const hot = hotRoutes.has(String(r.route_id))
     return {
-      coords: r.stops.map((s) => [s.lat, s.lng]),
+      coords: r.road_polyline?.length
+        ? r.road_polyline
+        : r.stops.map((s) => [s.lat, s.lng]),
       color: ROUTE_COLORS[r.route_id] || '#2E7D4F',
       weight: hot ? 5 : 2,
       opacity: hot ? 0.95 : 0.35,
@@ -303,6 +307,48 @@ export default function Operator() {
                   {accuracy.data.samples} SAMPLES · MEDIAN ERROR{' '}
                   {accuracy.data.median_error_min} MIN
                 </div>
+              </div>
+            ) : (
+              <Skeleton className="mt-3 h-16 w-full" />
+            )}
+          </div>
+
+          <div className="rounded-xl border border-edge bg-panel p-5">
+            <div className="flex items-center justify-between">
+              <Mono className="text-xs font-bold tracking-[0.3em] text-fog">CITY CONDITIONS</Mono>
+              <Mono className="text-[10px] text-fog">LIVE · OPEN-METEO</Mono>
+            </div>
+            {conditions.data ? (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-baseline gap-3">
+                  <span className="text-3xl font-bold text-snow">
+                    {conditions.data.temperature_c}°C
+                  </span>
+                  <span className="font-mono text-xs text-fog">
+                    HUM {conditions.data.humidity}% · WIND {conditions.data.wind_kmh} KM/H
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2">
+                  <span
+                    className={`text-2xl font-bold ${
+                      conditions.data.us_aqi != null && conditions.data.us_aqi >= 151
+                        ? 'text-amber'
+                        : 'text-phos'
+                    }`}
+                  >
+                    AQI {conditions.data.us_aqi ?? '—'}
+                  </span>
+                  {conditions.data.verdict && (
+                    <span className="font-mono text-[10px] font-bold tracking-widest text-amber">
+                      {conditions.data.verdict.band}
+                    </span>
+                  )}
+                </div>
+                {conditions.data.verdict && (
+                  <div className="font-mono text-xs leading-snug text-fog">
+                    {conditions.data.verdict.note}
+                  </div>
+                )}
               </div>
             ) : (
               <Skeleton className="mt-3 h-16 w-full" />
