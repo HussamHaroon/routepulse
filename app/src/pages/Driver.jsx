@@ -24,6 +24,10 @@ export default function Driver() {
   const watchRef = useRef(null)
   const gpsPosRef = useRef(null)
 
+  // Seed data gives some drivers mock-style route ids ('R7'); live routes are
+  // '7'. Normalize on intake so lookups never 404 and the preview map renders.
+  const normRoute = (r) => (r ? String(r).replace(/^R/i, '') : r)
+
   // Live route/bus options (mock ids never match the deployed database).
   const net = usePoll(() => getNetwork(demo), 60000, [demo])
   const ROUTE_SET = net.data?.routes?.length ? net.data.routes : ROUTES
@@ -37,7 +41,7 @@ export default function Driver() {
         if (d.drivers[0]) {
           setDriverId(d.drivers[0].driver_id)
           if (d.drivers[0].assigned_bus) setBusId(d.drivers[0].assigned_bus)
-          if (d.drivers[0].route_id) setRouteId(d.drivers[0].route_id)
+          if (d.drivers[0].route_id) setRouteId(normRoute(d.drivers[0].route_id))
         }
       })
       .catch((e) => setErr(e))
@@ -201,7 +205,7 @@ export default function Driver() {
                     setDriverId(e.target.value)
                     const d = drivers.find((x) => x.driver_id === e.target.value)
                     if (d?.assigned_bus) setBusId(d.assigned_bus)
-                    if (d?.route_id) setRouteId(d.route_id)
+                    if (d?.route_id) setRouteId(normRoute(d.route_id))
                   }}
                   className="min-h-11 w-full rounded-lg border border-edge bg-ink px-3 py-3 font-mono text-sm text-snow outline-none focus:border-phos/60"
                 >
@@ -396,7 +400,16 @@ function RouteMiniMap({ routeId, demo }) {
   if (!route) return null
   return (
     <MapView
-      polylines={[{ coords: route.stops.map((s) => [s.lat, s.lng]), opacity: 0.5 }]}
+      polylines={[
+        {
+          // road-snapped geometry, same as the operator/track maps — fall back
+          // to stop-to-stop only if the API returned no road polyline
+          coords: route.road_polyline?.length
+            ? route.road_polyline
+            : route.stops.map((s) => [s.lat, s.lng]),
+          opacity: 0.5,
+        },
+      ]}
       stops={route.stops}
       fitKey={route.route_id + String(demo)}
       className="h-72 w-full opacity-80"
