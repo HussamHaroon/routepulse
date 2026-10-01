@@ -219,7 +219,7 @@ export default function Operator() {
         />
 
         {/* ---- TIME TRAVEL ---- */}
-        <section className="rounded-xl border border-edge bg-panel">
+        <section className="self-start rounded-xl border border-edge bg-panel">
           <div className="flex flex-wrap items-center gap-3 border-b border-edge px-4 py-3">
             <Mono className="text-xs font-bold tracking-[0.3em] text-fog">TIME TRAVEL</Mono>
             <Mono className="text-[10px] text-fog">REPLAY THE NETWORK'S RECENT PAST</Mono>
@@ -251,6 +251,11 @@ export default function Operator() {
               )}
             </div>
           </div>
+          {!replay && (
+            <div className="px-4 py-3 font-mono text-[11px] leading-relaxed text-fog">
+              Snapshots every 10 s · up to 2 h of fleet history · press replay to scrub.
+            </div>
+          )}
           {replay && (
             <div className="px-4 py-3">
               {replay.frames?.length < 2 ? (
@@ -415,7 +420,7 @@ export default function Operator() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-edge bg-panel p-5">
+          <div className="self-start rounded-xl border border-edge bg-panel p-5">
             <Mono className="text-xs font-bold tracking-[0.3em] text-fog">ETA ACCURACY</Mono>
             {accuracy.data ? (
               <div className="mt-3 space-y-2">
@@ -441,7 +446,7 @@ export default function Operator() {
             )}
           </div>
 
-          <div className="rounded-xl border border-edge bg-panel p-5">
+          <div className="self-start rounded-xl border border-edge bg-panel p-5">
             <div className="flex items-center justify-between">
               <Mono className="text-xs font-bold tracking-[0.3em] text-fog">CITY CONDITIONS</Mono>
               <Mono className="text-[10px] text-fog">LIVE · OPEN-METEO</Mono>
