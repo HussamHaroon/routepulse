@@ -56,6 +56,19 @@ export function useLiveLocations(mock) {
         startPolling()
         return
       }
+      // Watchdog: a proxy can swallow the upgrade and leave the socket in
+      // CONNECTING forever (no close event, so the polling fallback below
+      // never triggers). Force the close so the fallback can do its job.
+      const watchdog = setTimeout(() => {
+        if (ws && ws.readyState === 0) {
+          try {
+            ws.close()
+          } catch {
+            /* noop */
+          }
+        }
+      }, 4000)
+      ws.onopen = () => clearTimeout(watchdog)
       ws.onmessage = (e) => {
         try {
           const frame = JSON.parse(e.data)
@@ -83,6 +96,7 @@ export function useLiveLocations(mock) {
         }
       }
       ws.onclose = () => {
+        clearTimeout(watchdog)
         if (closed) return
         wsAttempts += 1
         if (wsAttempts >= 2) startPolling()
@@ -97,10 +111,11 @@ export function useLiveLocations(mock) {
       }
     }
 
-    // initial full snapshot, then WS pushes
+    // initial full snapshot, then WS pushes. Data is arriving over HTTP here,
+    // so the badge must say POLL — 'connecting' is only for "no data yet".
     getLocations(false)
       .then((data) => {
-        if (!closed) setState({ locations: data.locations, source: 'connecting' })
+        if (!closed) setState({ locations: data.locations, source: 'poll' })
       })
       .catch(() => {})
 

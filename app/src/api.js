@@ -191,11 +191,13 @@ export const ingestGps = (busId, body, mock) => {
 }
 
 // WS endpoint. Backend serves WS on the same port at path /ws (see api/server.js).
-// dev: backend listens directly on :8787. prod (single URL): same host as the page.
+// dev: backend listens directly on :8787. prod: Vercel's proxy cannot upgrade
+// websocket passes to the API host (plain 200, handshake fails), so connect
+// straight to the Railway origin — it serves WS with no origin restriction.
 export const WS_URL = (() => {
   if (import.meta.env.DEV) return 'ws://localhost:8787/ws'
-  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  return `${proto}//${window.location.host}/ws`
+  if (import.meta.env.VITE_WS_URL) return import.meta.env.VITE_WS_URL
+  return 'wss://routepulse-production-50c8.up.railway.app/ws'
 })()
 
 // ---- crowd reports (P1) ----
