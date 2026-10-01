@@ -58,7 +58,7 @@ function Header() {
 
         <div className="ml-auto flex items-center gap-3">
           <span className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-fog sm:inline">
-            {demo ? 'mock feed' : 'api feed'}
+            {demo ? 'mock feed' : 'live feed'}
           </span>
           <button
             onClick={() => setDemo(!demo)}
@@ -92,10 +92,29 @@ function Footer() {
 }
 
 export default function App() {
-  const [demo, setDemo] = useState(() => localStorage.getItem('rp_demo') !== '0')
+  // Feed mode: LIVE is the default whenever the API answers /api/health.
+  // Mock is the offline fallback, or an explicit DEMO DATA toggle choice.
+  // localStorage 'rp_demo': '1' = force live · '0' = force mock · unset = auto.
+  const [demo, setDemoState] = useState(true) // first paint: skeletons while probing
   useEffect(() => {
-    localStorage.setItem('rp_demo', demo ? '1' : '0')
-  }, [demo])
+    let on = true
+    const stored = localStorage.getItem('rp_demo')
+    fetch(`${import.meta.env.VITE_API_URL || ''}/api/health`, { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .catch(() => null)
+      .then((h) => {
+        if (!on) return
+        const apiUp = !!h?.ok
+        setDemoState(stored === '0' ? true : stored === '1' ? false : !apiUp)
+      })
+    return () => {
+      on = false
+    }
+  }, [])
+  const setDemo = (v) => {
+    setDemoState(v)
+    localStorage.setItem('rp_demo', v ? '1' : '0')
+  }
 
   return (
     <DemoCtx.Provider value={{ demo, setDemo }}>
