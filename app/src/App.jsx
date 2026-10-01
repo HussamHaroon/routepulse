@@ -92,29 +92,36 @@ function Footer() {
 }
 
 export default function App() {
-  // Feed mode: LIVE is the default whenever the API answers /api/health.
-  // Mock is the offline fallback, or an explicit DEMO DATA toggle choice.
-  // localStorage 'rp_demo': '1' = force live · '0' = force mock · unset = auto.
+  // LIVE-first, always: on boot probe /api/health — success boots the live
+  // feed (WS badge, real positions, numeric ETAs). Mock appears only when
+  // the API is unreachable (retried briefly) or the user toggles DEMO DATA
+  // for this session. Nothing is persisted — a stale saved toggle can never
+  // force a mock-first default across reloads.
   const [demo, setDemoState] = useState(true) // first paint: skeletons while probing
   useEffect(() => {
     let on = true
-    const stored = localStorage.getItem('rp_demo')
-    fetch(`${import.meta.env.VITE_API_URL || ''}/api/health`, { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .catch(() => null)
-      .then((h) => {
+    let tries = 0
+    const probe = () =>
+      fetch(`${import.meta.env.VITE_API_URL || ''}/api/health`, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null)
+    const attempt = () => {
+      tries += 1
+      probe().then((h) => {
         if (!on) return
-        const apiUp = !!h?.ok
-        setDemoState(stored === '0' ? true : stored === '1' ? false : !apiUp)
+        if (h?.ok) {
+          setDemoState(false) // API is up → LIVE wins, unconditionally
+        } else if (tries < 3) {
+          setTimeout(attempt, 2000) // API warming up — keep trying
+        } // else: stay on mock fallback
       })
+    }
+    attempt()
     return () => {
       on = false
     }
   }, [])
-  const setDemo = (v) => {
-    setDemoState(v)
-    localStorage.setItem('rp_demo', v ? '1' : '0')
-  }
+  const setDemo = setDemoState // session-only toggle (deliberately not persisted)
 
   return (
     <DemoCtx.Provider value={{ demo, setDemo }}>
