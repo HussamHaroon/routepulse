@@ -2,7 +2,7 @@
 
 Live public-transport tracking for Lahore: search a route, watch every bus move on the map in real time, get per-stop arrival **ETAs with a confidence rating**, and receive service alerts the moment operators publish them. Drivers stream phone GPS; operators run the network from a dark control-room dashboard.
 
-https://github.com/HussamHaroon/routepulse/releases/download/demo-v1/demo.mp4
+https://github.com/user-attachments/assets/26eeba20-6ba2-4cdb-8c36-ab0ff51c180b
 
 *▶ 71-second narrated demo — operator alert → passenger screen in <2s, live map, confidence-rated ETAs.*
 
