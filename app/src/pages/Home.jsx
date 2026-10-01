@@ -74,11 +74,11 @@ function DestinationRoll() {
           {rows.map(([num, from, to], k) => (
             <div key={k} className="rp-roll-row">
               <span className="font-mono text-xs font-medium text-signal">{num}</span>
-              <span className="text-xl font-semibold uppercase tracking-tight text-snow sm:text-2xl">
+              <span className="text-lg font-semibold uppercase tracking-tight text-snow sm:text-2xl">
                 {from}
               </span>
               <span className="text-fog">⟶</span>
-              <span className="text-xl font-semibold uppercase tracking-tight text-snow sm:text-2xl">
+              <span className="text-lg font-semibold uppercase tracking-tight text-snow sm:text-2xl">
                 {to}
               </span>
             </div>
@@ -99,6 +99,12 @@ function VideoScrub() {
   const sectionRef = useRef(null)
   const videoRef = useRef(null)
   const rafRef = useRef(0)
+  // touch devices: skip the 350vh scroll-scrub (janks on mobile) — the clip
+  // just plays while in view inside a single 100svh frame
+  const [coarse, setCoarse] = useState(false)
+  useEffect(() => {
+    setCoarse(window.matchMedia('(pointer: coarse)').matches)
+  }, [])
 
   useEffect(() => {
     const section = sectionRef.current
@@ -157,8 +163,12 @@ function VideoScrub() {
   }, [])
 
   return (
-    <section ref={sectionRef} style={{ '--p': 0 }} className="relative h-[350vh]">
-      <div className="sticky top-0 flex h-screen items-center justify-center overflow-hidden bg-paper-deep">
+    <section
+      ref={sectionRef}
+      style={{ '--p': 0 }}
+      className={coarse ? 'relative rp-fullh' : 'relative h-[350vh]'}
+    >
+      <div className="rp-fullh sticky top-0 flex items-center justify-center overflow-hidden bg-paper-deep">
         <video
           ref={videoRef}
           className="rp-warm absolute inset-0 h-full w-full object-cover"
@@ -178,28 +188,47 @@ function VideoScrub() {
           />
         </video>
         <div className="absolute inset-0 bg-gradient-to-b from-ink via-transparent to-ink" />
+        {/* readability scrim so overlay copy survives any footage */}
+        <div className="absolute inset-0 bg-night/35" />
 
-        {STEPS.map((s) => (
-          <div
-            key={s.label}
-            className="absolute inset-0 flex items-center justify-center px-6"
-            style={{
-              opacity: `calc(clamp(0, (var(--p) - ${s.a}) / 0.08, 1) * clamp(0, (${s.b} - var(--p)) / 0.08, 1))`,
-            }}
-          >
-            <h3 className="text-center font-display text-4xl font-semibold uppercase tracking-tight text-snow drop-shadow-[0_1px_14px_rgba(244,239,228,0.55)] sm:text-6xl">
-              {s.label.split(' ')[0]}{' '}
-              <em className="text-signal">{s.label.split(' ').slice(1).join(' ')}</em>
-            </h3>
+        {coarse ? (
+          /* touch: no scrub — show the three beats as a stacked caption block */
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-night/85 via-night/45 to-transparent px-6 pb-14 pt-12 text-center">
+            {STEPS.map((s) => (
+              <h3
+                key={s.label}
+                className="font-display text-2xl font-semibold uppercase tracking-tight text-paper drop-shadow-[0_1px_10px_rgba(18,20,23,0.8)] sm:text-3xl"
+              >
+                {s.label.split(' ')[0]}{' '}
+                <em className="text-signal">{s.label.split(' ').slice(1).join(' ')}</em>
+              </h3>
+            ))}
           </div>
-        ))}
+        ) : (
+          STEPS.map((s) => (
+            <div
+              key={s.label}
+              className="absolute inset-0 flex items-center justify-center px-6"
+              style={{
+                opacity: `calc(clamp(0, (var(--p) - ${s.a}) / 0.08, 1) * clamp(0, (${s.b} - var(--p)) / 0.08, 1))`,
+              }}
+            >
+              <h3 className="text-center font-display text-4xl font-semibold uppercase tracking-tight text-paper drop-shadow-[0_1px_14px_rgba(18,20,23,0.75)] sm:text-6xl">
+                {s.label.split(' ')[0]}{' '}
+                <em className="text-signal">{s.label.split(' ').slice(1).join(' ')}</em>
+              </h3>
+            </div>
+          ))
+        )}
 
-        <div className="absolute bottom-8 left-1/2 h-px w-56 -translate-x-1/2 bg-edge">
-          <div
-            className="h-full bg-signal"
-            style={{ width: 'calc(var(--p) * 100%)' }}
-          />
-        </div>
+        {!coarse && (
+          <div className="absolute bottom-8 left-1/2 h-px w-56 -translate-x-1/2 bg-paper/40">
+            <div
+              className="h-full bg-signal"
+              style={{ width: 'calc(var(--p) * 100%)' }}
+            />
+          </div>
+        )}
       </div>
     </section>
   )
@@ -247,15 +276,22 @@ function StatsStrip() {
   return (
     <section className="border-y border-edge bg-paper-deep">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
-        <div className="mb-8 flex items-center gap-3 font-mono text-[10px] tracking-[0.25em] text-fog">
+        <div className="mb-8 flex items-center gap-3 font-mono text-xs tracking-[0.25em] text-fog">
           <span className={`h-2 w-2 rounded-full ${live ? 'bg-live rp-blink' : 'bg-signal'}`} />
           {live ? 'LIVE NETWORK' : 'DEMO DATA — API OFFLINE'}
         </div>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-3 lg:grid-cols-5">
-          {tiles.map(([label, value]) => (
-            <div key={label} className="border-l-2 border-ink/15 pl-4">
-              <div className="font-mono text-[10px] tracking-[0.2em] text-fog">{label}</div>
-              <div className="mt-2 font-display text-4xl font-semibold text-snow">{value}</div>
+        <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 sm:gap-x-6 lg:grid-cols-5">
+          {tiles.map(([label, value], i) => (
+            <div
+              key={label}
+              className={`min-w-0 border-l-2 border-ink/15 pl-4 ${
+                i === tiles.length - 1 ? 'col-span-2 sm:col-span-1' : ''
+              }`}
+            >
+              <div className="font-mono text-xs tracking-[0.2em] text-fog">{label}</div>
+              <div className="mt-2 break-words font-display text-3xl font-semibold text-snow sm:text-4xl">
+                {value}
+              </div>
             </div>
           ))}
         </div>
@@ -269,9 +305,9 @@ export default function Home() {
   return (
     <div>
       {/* ---------- HERO — the printed timetable came alive ---------- */}
-      <section className="rp-grid-bg relative flex min-h-[92vh] flex-col justify-center overflow-hidden border-b border-edge">
+      <section className="rp-grid-bg rp-hero relative flex flex-col justify-center overflow-hidden border-b border-edge">
         <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6">
-          <div className="mb-7 flex items-center gap-3 font-mono text-[10px] tracking-[0.3em] text-fog">
+          <div className="mb-7 flex items-center gap-3 font-mono text-xs tracking-[0.3em] text-fog">
             <span className="h-2 w-2 rounded-full bg-live rp-blink" />
             LIVE NETWORK — LAHORE
           </div>
@@ -293,22 +329,25 @@ export default function Home() {
           <div className="mt-9">
             <DestinationRoll />
           </div>
-          <div className="mt-10 flex flex-wrap items-center gap-6">
+          <div className="mt-7">
+            <DestinationRoll />
+          </div>
+          <div className="mt-9 flex flex-col gap-4 sm:mt-10 sm:flex-row sm:items-center sm:gap-6">
             <Link
               to="/search"
-              className="rounded-md bg-snow px-7 py-3.5 font-mono text-xs font-bold tracking-[0.2em] text-ink transition-colors hover:bg-signal hover:text-ink"
+              className="flex min-h-12 w-full items-center justify-center rounded-md bg-snow px-7 py-3.5 text-center font-mono text-xs font-bold tracking-[0.2em] text-ink transition-colors hover:bg-signal hover:text-ink sm:w-auto"
             >
               TRACK YOUR BUS →
             </Link>
             <Link
               to="/operator"
-              className="font-mono text-xs font-medium tracking-[0.2em] text-fog underline-offset-4 transition-colors hover:text-signal hover:underline"
+              className="flex min-h-11 items-center justify-center text-center font-mono text-xs font-medium tracking-[0.2em] text-fog underline-offset-4 transition-colors hover:text-signal hover:underline"
             >
               OPERATOR DASHBOARD
             </Link>
           </div>
         </div>
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 font-mono text-[10px] tracking-[0.3em] text-fog">
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 font-mono text-xs tracking-[0.3em] text-fog">
           SCROLL ↓
         </div>
       </section>
@@ -318,7 +357,7 @@ export default function Home() {
 
       {/* ---------- FEATURE CARDS — printed timetable panels ---------- */}
       <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6">
-        <div className="mb-10 font-mono text-[10px] tracking-[0.3em] text-fog">
+        <div className="mb-10 font-mono text-xs tracking-[0.3em] text-fog">
           WHAT THE TIMETABLE KNOWS
         </div>
         <div className="grid gap-6 md:grid-cols-3">
@@ -337,14 +376,14 @@ export default function Home() {
                 />
               </div>
               <div className="p-6">
-                <div className="font-mono text-[10px] tracking-[0.25em] text-fog">
+                <div className="font-mono text-xs tracking-[0.25em] text-fog">
                   {f.idx}
                 </div>
                 <h3 className="mt-2 font-display text-2xl font-semibold tracking-tight text-snow">
                   {f.title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-fog">{f.line}</p>
-                <div className="mt-4 font-mono text-[10px] tracking-[0.25em] text-signal transition-transform duration-300 group-hover:translate-x-1">
+                <div className="mt-4 font-mono text-xs tracking-[0.25em] text-signal transition-transform duration-300 group-hover:translate-x-1">
                   LEARN MORE
                 </div>
               </div>
@@ -358,9 +397,9 @@ export default function Home() {
 
       {/* ---------- FOOTER / CREDITS ---------- */}
       <footer className="mx-auto max-w-7xl px-4 py-12 text-center sm:px-6">
-        <p className="font-mono text-[10px] tracking-[0.18em] text-fog">
-          Data &amp; media: Pexels · Maps © OpenStreetMap contributors · Carbograph
-          tiles by CARTO · Built in one day at a hackathon.
+        <p className="font-mono text-xs tracking-[0.18em] text-fog">
+          Data &amp; media: Pexels · Maps © OpenStreetMap contributors · Tiles ©
+          Esri · Built in one day at a hackathon.
         </p>
       </footer>
     </div>

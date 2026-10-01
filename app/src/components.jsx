@@ -42,10 +42,10 @@ export const StatusChip = ({ status }) => {
   const c = STATUS_COLORS[status] || '#8B98A5'
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wider"
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 font-mono text-xs font-semibold uppercase tracking-wider"
       style={{ color: c, borderColor: `${c}55`, background: `${c}14` }}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ background: c }} />
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: c }} />
       {status}
     </span>
   )
@@ -63,11 +63,11 @@ export function LiveBadge({ source }) {
   const s = map[source] || map.connecting
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[10px] font-bold tracking-widest"
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 font-mono text-xs font-bold tracking-widest"
       style={{ color: s.color, borderColor: `${s.color}55`, background: `${s.color}12` }}
     >
       <span
-        className={`h-2 w-2 rounded-full ${s.pulse ? 'rp-blink' : ''}`}
+        className={`h-2 w-2 shrink-0 rounded-full ${s.pulse ? 'rp-blink' : ''}`}
         style={{ background: s.color }}
       />
       {s.label}
@@ -99,10 +99,10 @@ export function ErrorBanner({ error, onRetry }) {
 }
 
 // ---------- KPI card ----------
-export function Kpi({ label, value, suffix, color = '#E6EDF3', loading }) {
+export function Kpi({ label, value, suffix, color = '#E6EDF3', loading, className = '' }) {
   return (
-    <div className="rounded-xl border border-edge bg-panel p-4">
-      <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-fog">
+    <div className={`rounded-xl border border-edge bg-panel p-4 ${className}`}>
+      <div className="font-mono text-xs uppercase tracking-[0.2em] text-fog">
         {label}
       </div>
       {loading ? (
@@ -144,7 +144,7 @@ function FitBounds({ fitKey }) {
 }
 
 /**
- * MapView — dark OSM (CARTO) basemap, route polylines, stop markers, pulsing bus dots.
+ * MapView — dark Esri basemap, route polylines, stop markers, pulsing bus dots.
  * polylines: [{ coords: [[lat,lng]...], color?, weight? }]
  * stops:     [{ lat, lng, stop_name, stop_order }]
  * buses:     [{ bus_id, lat, lng, speed, delay_minutes, trip_status, next_stop }]
