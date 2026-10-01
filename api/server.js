@@ -4,6 +4,9 @@
 import express from 'express';
 import cors from 'cors';
 import http from 'node:http';
+import path from 'node:path';
+import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { db } from './db.js';
 import {
@@ -12,10 +15,17 @@ import {
   pointAtDistance,
 } from './geo.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const PORT = Number(process.env.PORT || 8787);
 const DEFAULT_SPEED_KMH = 25;
 const EMA_ALPHA = 0.35; // weight of each new observed speed
 const POSITION_STALE_SEC = 25; // past this, ETA confidence drops to 'low'
+
+// In-process GPS simulator (single-process deploys): on unless SIMULATE=0.
+const SIMULATE = process.env.SIMULATE !== '0';
+const SIM_BASE_KMH = Number(process.env.SIM_SPEED_KMH || 28);
+const SIM_INTERVAL_MS = 2000;
 
 const app = express();
 app.use(cors());
@@ -138,7 +148,10 @@ function computeEtas(routeId, busId) {
   const confidence = etaConfidence(routeId, proj.offsetKm, ageSec);
 
   const etas = ctx.stops.map((s, i) => {
-    const remaining = Math.max(0, ctx.poly.cum[i] - proj.distAlong);
+    // Loop-aware: stops the bus already passed get their next-loop ETA instead
+    // of pinning at 0 min / 0 km until the simulator wraps distAlong to 0.
+    const ahead = ctx.poly.cum[i] - proj.distAlong;
+    const remaining = ahead < 0 ? ahead + ctx.poly.total : Math.max(0, ahead);
     const etaMin = (remaining / speed) * 60 + delay;
     return {
       stop_id: s.stop_id,
@@ -352,18 +365,16 @@ app.get('/api/routes/:id/etas', (req, res) => {
 // ---------------------------------------------------------------------------
 // Ingest (driver app POST or simulator) → state, delay drift, DB, WS broadcast
 // ---------------------------------------------------------------------------
-app.post('/api/ingest/:bus_id', (req, res) => {
-  const busId = req.params.bus_id;
-  const { lat, lng, speed } = req.body || {};
-  if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
-    return res.status(400).json({ ok: false, error: 'lat and lng (numbers) are required' });
-  }
-  const trip = tripByBus.get(busId);
-  if (!trip) return res.status(409).json({ ok: false, error: `no active trip for bus ${busId}` });
 
-  const latN = Number(lat);
-  const lngN = Number(lng);
-  const spd = Number.isFinite(Number(speed)) ? Math.max(0, Number(speed)) : 0;
+/** Shared ingest path: EMA + delay drift + DB persist + WS broadcast.
+ *  Used by the HTTP route below AND by the in-process simulator. */
+function ingestPosition(busId, latIn, lngIn, speedIn) {
+  const trip = tripByBus.get(busId);
+  if (!trip) return null;
+
+  const latN = Number(latIn);
+  const lngN = Number(lngIn);
+  const spd = Number.isFinite(Number(speedIn)) ? Math.max(0, Number(speedIn)) : 0;
 
   // 1) Per-route EMA of observed speeds (drives every ETA)
   observeSpeed(trip.route_id, spd);
@@ -407,7 +418,21 @@ app.post('/api/ingest/:bus_id', (req, res) => {
   });
 
   // 4) Broadcast to every connected passenger/operator screen
-  broadcast(locationPayload(busId));
+  const payload = locationPayload(busId);
+  broadcast(payload);
+  return payload;
+}
+
+app.post('/api/ingest/:bus_id', (req, res) => {
+  const busId = req.params.bus_id;
+  const { lat, lng, speed } = req.body || {};
+  if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) {
+    return res.status(400).json({ ok: false, error: 'lat and lng (numbers) are required' });
+  }
+  if (!tripByBus.get(busId)) {
+    return res.status(409).json({ ok: false, error: `no active trip for bus ${busId}` });
+  }
+  ingestPosition(busId, lat, lng, speed);
   res.json({ ok: true });
 });
 
@@ -618,6 +643,19 @@ app.post('/api/trips/:id/end', (req, res) => {
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.use('/api', (_req, res) => res.status(404).json({ error: 'not found' }));
+
+// ---------------------------------------------------------------------------
+// Single-domain deploy: serve the built frontend (app/dist) from this server.
+// In dev the app runs on its own vite port with a proxy — this only activates
+// when a production build exists.
+// ---------------------------------------------------------------------------
+const distDir = path.join(__dirname, '..', 'app', 'dist');
+if (fs.existsSync(path.join(distDir, 'index.html'))) {
+  app.use(express.static(distDir));
+  // SPA fallback: any non-/api GET serves the app (client routing)
+  app.get(/^\/(?!api(\/|$)).*/, (_req, res) => res.sendFile(path.join(distDir, 'index.html')));
+  console.log('[api] serving frontend from app/dist (single-domain mode)');
+}
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
   console.error('[api] error:', err.message);
@@ -626,6 +664,46 @@ app.use((err, _req, res, _next) => {
 
 // ---------------------------------------------------------------------------
 loadLiveState();
+
+// ---------------------------------------------------------------------------
+// In-process GPS simulator (SIMULATE !== '0') — replaces the separate
+// /simulator process for single-process deploys (Render etc.). Same movement
+// model as simulator/sim.js: ~28 km/h ±20% random walk along the route
+// polyline, looping back to the start at the end. Driver-app GPS
+// (POST /api/ingest) keeps working alongside it; trips started mid-session
+// are picked up automatically on the next tick.
+// ---------------------------------------------------------------------------
+if (SIMULATE) {
+  const simState = new Map(); // bus_id -> { distAlong, factor, route_id }
+  setInterval(() => {
+    const dtH = SIM_INTERVAL_MS / 3600000;
+    for (const [busId, trip] of tripByBus) {
+      try {
+        const { poly } = getRouteContext(trip.route_id);
+        let st = simState.get(busId);
+        if (!st || st.route_id !== trip.route_id) {
+          const pos = positions.get(busId) || {};
+          const proj = projectOntoPolyline(Number(pos.lat), Number(pos.lng), poly);
+          st = { distAlong: proj.distAlong, factor: 1, route_id: trip.route_id };
+          console.log(
+            `[sim] tracking ${busId} on route ${trip.route_id} — joined at ${proj.distAlong.toFixed(2)} km`
+          );
+        }
+        st.factor = Math.min(1.2, Math.max(0.8, st.factor + (Math.random() - 0.5) * 0.12));
+        st.distAlong += SIM_BASE_KMH * st.factor * dtH;
+        if (st.distAlong >= poly.total) st.distAlong = 0; // loop the service
+        simState.set(busId, st);
+        const p = pointAtDistance(poly, st.distAlong);
+        ingestPosition(busId, p.lat, p.lng, SIM_BASE_KMH * st.factor);
+      } catch (e) {
+        console.error(`[sim] ${busId}:`, e.message);
+      }
+    }
+  }, SIM_INTERVAL_MS);
+  console.log(
+    `[sim] in-process simulator ON — ${SIM_BASE_KMH} km/h every ${SIM_INTERVAL_MS}ms (SIMULATE=0 to disable)`
+  );
+}
 
 server.listen(PORT, () => {
   console.log('┌──────────────────────────────────────────────────────┐');
