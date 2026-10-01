@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { endTrip, getDrivers, getRoute, ingestGps, startTrip, updateTrip } from '../api'
-import { ROUTES, ALL_BUS_IDS } from '../mock'
+import { endTrip, getDrivers, getNetwork, getRoute, ingestGps, startTrip, updateTrip } from '../api'
+import { ROUTES, ALL_BUS_IDS, routeNumber } from '../mock'
+import { usePoll } from '../hooks'
 import { useDemo } from '../App'
 import { ErrorBanner, MapView, Mono, Skeleton, StatusChip } from '../components'
 
@@ -21,6 +22,12 @@ export default function Driver() {
   const [gpsPos, setGpsPos] = useState(null)
   const watchRef = useRef(null)
   const gpsPosRef = useRef(null)
+
+  // Live route/bus options (mock ids never match the deployed database).
+  const net = usePoll(() => getNetwork(demo), 60000, [demo])
+  const ROUTE_SET = net.data?.routes?.length ? net.data.routes : ROUTES
+  const liveBusIds = [...new Set((drivers || []).map((d) => d.assigned_bus).filter(Boolean))]
+  const BUS_IDS = liveBusIds.length ? liveBusIds : ALL_BUS_IDS
 
   useEffect(() => {
     getDrivers(demo)
@@ -176,7 +183,7 @@ export default function Driver() {
                 className="min-h-11 w-full rounded-lg border border-edge bg-ink px-3 py-3 font-mono text-sm text-snow outline-none focus:border-phos/60"
               >
                 <option value="">— select bus —</option>
-                {ALL_BUS_IDS.map((id) => (
+                {BUS_IDS.map((id) => (
                   <option key={id} value={id}>
                     {id}
                   </option>
@@ -193,9 +200,9 @@ export default function Driver() {
                 className="min-h-11 w-full rounded-lg border border-edge bg-ink px-3 py-3 font-mono text-sm text-snow outline-none focus:border-phos/60"
               >
                 <option value="">— select route —</option>
-                {ROUTES.map((r) => (
+                {ROUTE_SET.map((r) => (
                   <option key={r.route_id} value={r.route_id}>
-                    [ {r.number} ] {r.route_name}
+                    {routeNumber(r)} · {r.route_name}
                   </option>
                 ))}
               </select>

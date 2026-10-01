@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAlerts, getDrivers, getStats, publishAlert } from '../api'
+import { getAlerts, getDrivers, getNetwork, getStats, publishAlert } from '../api'
 import { ROUTES, routeNumber } from '../mock'
 import { useLiveLocations, usePoll } from '../hooks'
 import { useDemo } from '../App'
@@ -16,7 +16,21 @@ import {
   agoMin,
 } from '../components'
 
-const ROUTE_COLORS = { R7: '#2E7D4F', R5: '#E4572E', R3: '#B3402E', R9: '#6E6656' }
+// Muted night-register palette, keyed by both mock (R#) and live (numeric) ids.
+const ROUTE_COLORS = {
+  R7: '#2E7D4F',
+  R5: '#E4572E',
+  R3: '#B3402E',
+  R9: '#6E6656',
+  1: '#2E7D4F',
+  2: '#E4572E',
+  3: '#B3402E',
+  4: '#6E6656',
+  5: '#C9A227',
+  6: '#3F6E5E',
+  7: '#D07B3A',
+  8: '#8A8F98',
+}
 
 export default function Operator() {
   const { demo } = useDemo()
@@ -24,6 +38,8 @@ export default function Operator() {
   const stats = usePoll(() => getStats(demo), 5000, [demo])
   const drivers = usePoll(() => getDrivers(demo), 15000, [demo])
   const allAlerts = usePoll(() => getAlerts(null, demo), 8000, [demo])
+  const net = usePoll(() => getNetwork(demo), 30000, [demo])
+  const ROUTE_SET = net.data?.routes?.length ? net.data.routes : ROUTES
 
   // alert publisher state
   const [alertRoute, setAlertRoute] = useState('ALL')
@@ -55,13 +71,13 @@ export default function Operator() {
     return d?.name || '—'
   }
 
-  const allCoords = ROUTES.map((r) => ({
+  const allCoords = ROUTE_SET.map((r) => ({
     coords: r.stops.map((s) => [s.lat, s.lng]),
     color: ROUTE_COLORS[r.route_id] || '#2E7D4F',
     weight: 2,
     opacity: 0.35,
   }))
-  const allStops = ROUTES.flatMap((r) =>
+  const allStops = ROUTE_SET.flatMap((r) =>
     r.stops.map((s) => ({ ...s, stop_name: `${routeNumber(r)}·${s.stop_name}` }))
   )
 
@@ -128,7 +144,7 @@ export default function Operator() {
                 className="min-h-11 w-full rounded-lg border border-edge bg-ink px-3 py-3 font-mono text-sm text-snow outline-none focus:border-phos/60"
               >
                 <option value="ALL">ALL ROUTES (network-wide)</option>
-                {ROUTES.map((r) => (
+                {ROUTE_SET.map((r) => (
                   <option key={r.route_id} value={r.route_id}>
                     {routeNumber(r)} · {r.route_name}
                   </option>
@@ -178,7 +194,7 @@ export default function Operator() {
                   <div className="min-w-0">
                     <div className="text-xs leading-snug text-snow">{a.message}</div>
                     <div className="mt-0.5 font-mono text-xs text-fog">
-                      {a.route_id ? `ROUTE ${a.route_id.replace('R', '')}` : 'ALL ROUTES'} ·{' '}
+                      {a.route_id ? `ROUTE ${String(a.route_id).replace('R', '')}` : 'ALL ROUTES'} ·{' '}
                       {agoMin(a.created_at)} MIN AGO
                     </div>
                   </div>

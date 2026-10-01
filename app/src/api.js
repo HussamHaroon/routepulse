@@ -115,6 +115,14 @@ export const publishAlert = (route_id, message, mock) =>
     ? Promise.resolve(m.mockPublishAlert(route_id, message))
     : j('/api/alerts', { method: 'POST', body: JSON.stringify({ route_id, message }) })
 
+// WP3: history-mined analytics — delay rhythm per route + ETA accuracy grades.
+// Demo mode has no history table, so patterns resolve empty and the panel hides.
+export const getDelayPatterns = (mock) =>
+  mock ? Promise.resolve({ patterns: [] }) : j('/api/analytics/delay-patterns')
+
+export const getEtaAccuracy = (mock) =>
+  mock ? Promise.resolve(null) : j('/api/analytics/eta-accuracy')
+
 export const getStats = (mock) =>
   mock ? Promise.resolve(m.mockStats()) : j('/api/stats')
 
