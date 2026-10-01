@@ -135,19 +135,39 @@ const busIcon = (status) =>
 // not be attached yet when this effect first runs, and a static fitKey never
 // re-fits once the live network replaces the mock fallback). Re-runs when the
 // point count changes so the view always lands on the real network extent.
+const LAHORE_BBOX = { latMin: 31.2, latMax: 31.95, lngMin: 73.7, lngMax: 75.1 }
 function FitBounds({ fitKey, points = [] }) {
   const map = useMap()
   useEffect(() => {
-    const valid = points.filter(
-      (p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1])
-    )
-    if (!valid.length) return
-    try {
-      const b = L.latLngBounds(valid)
-      if (b.isValid()) map.fitBounds(b.pad(0.12), { animate: false })
-    } catch {
-      /* bad coords — keep the default view instead of crashing */
+    const fit = () => {
+      // one stray far-away point (bad seed row, mock fallback, 0/0 GPS) would
+      // stretch the bounds to the whole planet and drop the map to zoom 0 —
+      // clamp to the network's home city before fitting
+      const valid = points.filter(
+        (p) =>
+          Array.isArray(p) &&
+          Number.isFinite(p[0]) &&
+          Number.isFinite(p[1]) &&
+          p[0] > LAHORE_BBOX.latMin &&
+          p[0] < LAHORE_BBOX.latMax &&
+          p[1] > LAHORE_BBOX.lngMin &&
+          p[1] < LAHORE_BBOX.lngMax
+      )
+      if (!valid.length) return
+      try {
+        map.invalidateSize()
+        const b = L.latLngBounds(valid)
+        if (b.isValid()) map.fitBounds(b.pad(0.12), { animate: false })
+        // degenerate fit (tiny/huge bounds computing to a world view) — hold
+        // the city view instead of letting the map collapse to zoom 0
+        if (map.getZoom() < 9) map.setView([31.5582, 74.3507], 12, { animate: false })
+      } catch {
+        /* bad coords — keep the default view instead of crashing */
+      }
     }
+    fit()
+    const t = setTimeout(fit, 400) // container may still be laying out on first run
+    return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey, points.length])
   return null
