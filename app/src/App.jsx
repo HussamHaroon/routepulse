@@ -29,10 +29,11 @@ function Header() {
       {/* row 1 — brand + (desktop) links + feed toggle */}
       <div className="mx-auto flex max-w-7xl items-center gap-x-6 px-4 py-2 sm:px-6">
         <NavLink to="/" className="flex min-w-0 items-center gap-2.5">
-          <span className="relative flex h-3.5 w-3.5 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-phos opacity-60" />
-            <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-phos" />
-          </span>
+          <img
+            src="/logo-mark.png"
+            alt="Routepulse logo"
+            className="h-8 w-8 shrink-0"
+          />
           <span className="whitespace-nowrap font-mono text-base font-extrabold tracking-[0.12em] text-snow sm:text-lg sm:tracking-[0.18em]">
             ROUTE<span className="text-phos">PULSE</span>
           </span>
