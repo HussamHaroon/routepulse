@@ -1,0 +1,10 @@
+{
+  "name": "@routepulse/simulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "sim.js",
+  "scripts": {
+    "start": "node sim.js"
+  }
+}
