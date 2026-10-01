@@ -6,6 +6,7 @@ import { ALL_STOP_NAMES, haversineKm, routeNumber } from '../mock'
 import { useLiveLocations } from '../hooks'
 import { useDemo } from '../App'
 import { ErrorBanner, Mono, RouteChip, Skeleton } from '../components'
+import { ROUTE_PHOTOS, GALLERY } from '../media'
 
 function nextBusMinutes(locations, route, atStopName) {
   const stop = route.stops?.find((s) => s.stop_name === atStopName) || route.stops?.[0]
@@ -51,15 +52,31 @@ function CrowdChip({ routeId }) {
 function ResultCard({ route, locations, faved, onToggleFav }) {
   const isTransfer = !!route.transfer
   const mins = nextBusMinutes(locations, route, route.start_location)
+  const photo = ROUTE_PHOTOS[String(route.route_id)]
   return (
     <Link
       to={`/track/${route.route_id}`}
-      className={`group block rounded-xl border p-5 transition hover:-translate-y-0.5 ${
+      className={`group block overflow-hidden rounded-xl border transition hover:-translate-y-0.5 ${
         isTransfer
           ? 'border-amber/40 bg-amber/5 hover:border-amber/70'
           : 'border-edge bg-panel hover:border-phos/60 hover:bg-panel2'
       }`}
     >
+      {photo && (
+        <div className="relative h-28 overflow-hidden sm:h-32">
+          <img
+            src={photo.url}
+            alt={photo.alt}
+            loading="lazy"
+            className="h-full w-full object-cover sepia-[0.12] saturate-[0.9] transition duration-700 group-hover:scale-[1.04]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/10 to-transparent" />
+          <span className="absolute bottom-2 left-3 font-mono text-[10px] tracking-widest text-snow/90">
+            © {photo.by.toUpperCase()}
+          </span>
+        </div>
+      )}
+      <div className="p-5">
       <div className="flex flex-wrap items-center gap-3">
         <RouteChip route={route} big />
         <button
@@ -130,6 +147,7 @@ function ResultCard({ route, locations, faved, onToggleFav }) {
             <span className="xl:hidden">{s.stop_order}</span>
           </span>
         ))}
+      </div>
       </div>
     </Link>
   )
@@ -342,6 +360,35 @@ export default function Search() {
                 onToggleFav={(id) => setFavs(toggleFav(id))}
               />
             ))}
+      </section>
+
+      {/* ---------- CITY GALLERY ---------- */}
+      <section className="mt-10">
+        <div className="mb-3 flex items-baseline justify-between">
+          <Mono className="text-xs font-bold tracking-[0.3em] text-fog">THE CITY, FROM THE ROUTE</Mono>
+          <Mono className="text-xs text-fog">PEXELS · LAHORE</Mono>
+        </div>
+        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0">
+          {GALLERY.map((g, i) => (
+            <figure
+              key={g.id}
+              className={`relative w-64 shrink-0 snap-start overflow-hidden rounded-xl border border-edge sm:w-72 ${
+                i % 2 ? 'rotate-[0.4deg]' : '-rotate-[0.4deg]'
+              }`}
+            >
+              <img
+                src={g.url}
+                alt={g.alt}
+                loading="lazy"
+                className="h-40 w-full object-cover sepia-[0.14] saturate-[0.92] transition duration-700 hover:scale-[1.03]"
+              />
+              <figcaption className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-ink/80 to-transparent px-3 pb-2 pt-6 font-mono text-[10px] tracking-widest text-snow">
+                <span>{String(i + 1).padStart(2, '0')} · LAHORE</span>
+                <span className="text-fog">© {g.by.toUpperCase()}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
       </section>
     </div>
   )

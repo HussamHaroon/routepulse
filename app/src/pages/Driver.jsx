@@ -4,6 +4,7 @@ import { ROUTES, ALL_BUS_IDS, routeNumber } from '../mock'
 import { usePoll } from '../hooks'
 import { useDemo } from '../App'
 import { ErrorBanner, MapView, Mono, Skeleton, StatusChip } from '../components'
+import { VIDEOS } from '../media'
 
 const btn =
   'rounded-lg border px-4 py-3 font-mono text-xs font-bold tracking-widest transition disabled:opacity-40'
@@ -143,6 +144,29 @@ export default function Driver() {
           Start your trip
         </h1>
       </div>
+
+      {/* ---------- CAB AMBIENCE ---------- */}
+      {VIDEOS[0] && (
+        <figure className="relative h-44 overflow-hidden rounded-2xl border border-edge sm:h-56">
+          <video
+            src={VIDEOS[0].url}
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="h-full w-full object-cover opacity-80 saturate-[0.85]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink/80 via-ink/30 to-transparent" />
+          <figcaption className="absolute bottom-3 left-4 max-w-[70%]">
+            <Mono className="block text-[10px] tracking-[0.3em] text-snow/80">
+              CAB VIEW — STREAMED TO THE CONTROL ROOM
+            </Mono>
+            <span className="mt-1 block font-mono text-xs text-fog">
+              © {VIDEOS[0].by} · Pexels
+            </span>
+          </figcaption>
+        </figure>
+      )}
 
       {!trip ? (
         /* ---------- start trip panel ---------- */
