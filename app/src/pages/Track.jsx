@@ -342,9 +342,9 @@ export default function Track() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
               { label: 'BUS', value: leadBus ? leadBus.bus_id : '—', color: '#2E7D4F' },
-              { label: 'SPEED', value: leadBus ? `${leadBus.speed} KM/H` : '—', color: '#E6EDF3' },
-              { label: 'DELAY', value: leadBus ? `${leadBus.delay_minutes} MIN` : '—', color: leadBus?.delay_minutes > 0 ? '#E4572E' : '#8B98A5' },
-              { label: 'NEXT STOP', value: leadBus?.next_stop || '—', color: '#E6EDF3', small: true },
+              { label: 'SPEED', value: leadBus ? `${leadBus.speed} KM/H` : '—', color: '#211D16' },
+              { label: 'DELAY', value: leadBus ? `${leadBus.delay_minutes} MIN` : '—', color: leadBus?.delay_minutes > 0 ? '#E4572E' : '#6E6656' },
+              { label: 'NEXT STOP', value: leadBus?.next_stop || '—', color: '#211D16', small: true },
             ].map((c) => (
               <div key={c.label} className="min-w-0 rounded-lg border border-edge bg-panel px-3 py-2.5">
                 <div className="font-mono text-xs uppercase tracking-[0.2em] text-fog">

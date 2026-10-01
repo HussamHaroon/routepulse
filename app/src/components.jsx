@@ -225,9 +225,9 @@ export function MapView({
             key={i}
             positions={p.coords}
             pathOptions={{
-              color: p.color || '#E4572E',
-              weight: p.weight || 4,
-              opacity: p.opacity ?? 0.75,
+              color: p.color || '#FF4F1F',
+              weight: p.weight || 5,
+              opacity: p.opacity ?? 0.92,
               dashArray: p.dashArray,
               className: `${drawIn ? 'rp-draw ' : ''}${p.hot ? 'rp-route-hot' : ''}`.trim() || undefined,
             }}
