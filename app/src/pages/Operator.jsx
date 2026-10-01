@@ -219,7 +219,7 @@ export default function Operator() {
         />
 
         {/* ---- TIME TRAVEL ---- */}
-        <section className="self-start rounded-xl border border-edge bg-panel">
+        <section className="flex flex-col rounded-xl border border-edge bg-panel">
           <div className="flex flex-wrap items-center gap-3 border-b border-edge px-4 py-3">
             <Mono className="text-xs font-bold tracking-[0.3em] text-fog">TIME TRAVEL</Mono>
             <Mono className="text-[10px] text-fog">REPLAY THE NETWORK'S RECENT PAST</Mono>
@@ -252,7 +252,7 @@ export default function Operator() {
             </div>
           </div>
           {!replay && (
-            <div className="px-4 py-3 font-mono text-[11px] leading-relaxed text-fog">
+            <div className="flex flex-1 items-center justify-center px-4 py-3 text-center font-mono text-[11px] leading-relaxed text-fog">
               Snapshots every 10 s · up to 2 h of fleet history · press replay to scrub.
             </div>
           )}
@@ -420,10 +420,10 @@ export default function Operator() {
             </div>
           </div>
 
-          <div className="self-start rounded-xl border border-edge bg-panel p-5">
+          <div className="flex flex-col rounded-xl border border-edge bg-panel p-5">
             <Mono className="text-xs font-bold tracking-[0.3em] text-fog">ETA ACCURACY</Mono>
             {accuracy.data ? (
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 flex flex-1 flex-col justify-center space-y-2">
                 <div className="flex items-baseline gap-2">
                   <span className="text-3xl font-bold text-phos">
                     {accuracy.data.within_2min_pct}%
@@ -446,13 +446,13 @@ export default function Operator() {
             )}
           </div>
 
-          <div className="self-start rounded-xl border border-edge bg-panel p-5">
+          <div className="flex flex-col rounded-xl border border-edge bg-panel p-5">
             <div className="flex items-center justify-between">
               <Mono className="text-xs font-bold tracking-[0.3em] text-fog">CITY CONDITIONS</Mono>
               <Mono className="text-[10px] text-fog">LIVE · OPEN-METEO</Mono>
             </div>
             {conditions.data ? (
-              <div className="mt-3 space-y-2">
+              <div className="mt-3 flex flex-1 flex-col justify-center space-y-2">
                 <div className="flex items-baseline gap-3">
                   <span className="text-3xl font-bold text-snow">
                     {conditions.data.temperature_c}°C
