@@ -115,7 +115,11 @@ async function tick() {
     jobs.push(
       api(`/api/ingest/${encodeURIComponent(busId)}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        // Non-GET /api calls require the operator key (see api/server.js F-01).
+        headers: {
+          'content-type': 'application/json',
+          'x-api-key': process.env.OPERATOR_KEY || 'routepulse-demo-key',
+        },
         body: JSON.stringify({ lat: p.lat, lng: p.lng, speed: kmh }),
       })
         .then(({ status, body }) => {

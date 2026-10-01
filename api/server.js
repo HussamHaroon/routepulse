@@ -140,7 +140,9 @@ function observeSpeed(routeId, kmh) {
 
 function currentSpeedKmh(routeId) {
   const st = routeStats.get(routeId);
-  return st?.ema ?? DEFAULT_SPEED_KMH;
+  // Floor at 3 km/h: an EMA of exactly 0 (first ingest without a speed field,
+  // or a stopped bus) divides every ETA to Infinity → serialized as null.
+  return Math.max(3, st?.ema ?? DEFAULT_SPEED_KMH);
 }
 
 /**
@@ -867,7 +869,9 @@ if (fs.existsSync(path.join(distDir, 'index.html'))) {
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
   console.error('[api] error:', err.message);
-  res.status(500).json({ error: 'internal error' });
+  // Honor parser errors' status (e.g. malformed JSON body → 400, not 500).
+  if (res.headersSent) return _next(err);
+  res.status(err.status || err.statusCode || 500).json({ error: 'internal error' });
 });
 
 // ---------------------------------------------------------------------------
