@@ -33,9 +33,11 @@ const app = express();
 app.set('trust proxy', 1); // behind Render's proxy → correct client IPs for rate limiting
 app.disable('x-powered-by');
 
-// F-03 (SECURITY_FINDINGS.md): rate limiting — 300 req/15min per IP across /api,
-// looser bucket for machine GPS ingest (driver phone / external simulator).
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false });
+// F-03 (SECURITY_FINDINGS.md): rate limiting — per IP across /api. 1000/15min
+// still caps floods (~1 req/s sustained) but won't lock out a judge whose
+// browser polls ETAs/alerts/stats from a single IP. Ingest gets its own
+// looser bucket (machine GPS traffic).
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, standardHeaders: true, legacyHeaders: false });
 const ingestLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1200, standardHeaders: true, legacyHeaders: false });
 app.use('/api/ingest', ingestLimiter);
 app.use('/api', apiLimiter);
