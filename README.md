@@ -2,6 +2,10 @@
 
 Live public-transport tracking for Lahore: search a route, watch every bus move on the map in real time, get per-stop arrival **ETAs with a confidence rating**, and receive service alerts the moment operators publish them. Drivers stream phone GPS; operators run the network from a dark control-room dashboard.
 
+https://github.com/HussamHaroon/routepulse/releases/download/demo-v1/demo.mp4
+
+*▶ 71-second narrated demo — operator alert → passenger screen in <2s, live map, confidence-rated ETAs.*
+
 ![Live tracking](screenshots/live-tracking.png)
 
 **Passenger (paper register, above)** · **Operator (night register)**
@@ -10,7 +14,7 @@ Live public-transport tracking for Lahore: search a route, watch every bus move 
 
 ## Try it live (60-second tour)
 
-- **Product video (71s, narrated):** [`screenshots/demo.mp4`](screenshots/demo.mp4)
+- **Product video:** the playable demo at the top of this README
 - **Live deployment:** https://routepulse-production-50c8.up.railway.app (API + WebSocket + app on one URL)
 - **Static demo (offline mock mode):** https://routepulse-pi.vercel.app
 - **Operator key** (for driver start-trip / GPS ingest / crowd reports): `routepulse-demo-key`
