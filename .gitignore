@@ -4,3 +4,12 @@ dist/
 .env.local
 *.log
 .DS_Store
+
+# internal docs never ship to the repo (kept on disk)
+*.md
+!README.md
+RUNBOOK.md
+docs/
+handoff/
+agents/
+crew-hq/
