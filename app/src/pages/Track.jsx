@@ -16,7 +16,7 @@ function ConfidenceChip({ confidence, range }) {
     )
   }
   const high = confidence === 'high'
-  const color = high ? '#22C55E' : '#F59E0B'
+  const color = high ? '#2E7D4F' : '#E4572E'
   return (
     <span
       className="inline-block rounded border px-1.5 py-0.5 font-mono text-[9px] font-bold tracking-wider"
@@ -142,7 +142,7 @@ export default function Track() {
       {/* header */}
       <div className="flex flex-wrap items-center gap-3">
         <Link
-          to="/"
+          to="/search"
           className="rounded-md border border-edge bg-panel px-3 py-1.5 font-mono text-xs font-bold text-fog transition hover:border-phos/50 hover:text-phos"
         >
           ← BACK
@@ -185,7 +185,7 @@ export default function Track() {
             polylines={[
               {
                 coords,
-                color: leadBus?.trip_status === 'Delayed' ? '#F59E0B' : '#22C55E',
+                color: leadBus?.trip_status === 'Delayed' ? '#E4572E' : '#2E7D4F',
               },
             ]}
             stops={route.stops}
@@ -197,9 +197,9 @@ export default function Track() {
           {/* live input readout — shows the ETA inputs (distance, speed, delay) */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              { label: 'BUS', value: leadBus ? leadBus.bus_id : '—', color: '#22C55E' },
+              { label: 'BUS', value: leadBus ? leadBus.bus_id : '—', color: '#2E7D4F' },
               { label: 'SPEED', value: leadBus ? `${leadBus.speed} KM/H` : '—', color: '#E6EDF3' },
-              { label: 'DELAY', value: leadBus ? `${leadBus.delay_minutes} MIN` : '—', color: leadBus?.delay_minutes > 0 ? '#F59E0B' : '#8B98A5' },
+              { label: 'DELAY', value: leadBus ? `${leadBus.delay_minutes} MIN` : '—', color: leadBus?.delay_minutes > 0 ? '#E4572E' : '#8B98A5' },
               { label: 'NEXT STOP', value: leadBus?.next_stop || '—', color: '#E6EDF3', small: true },
             ].map((c) => (
               <div key={c.label} className="rounded-lg border border-edge bg-panel px-3 py-2.5">

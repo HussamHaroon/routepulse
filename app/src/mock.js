@@ -454,7 +454,9 @@ export function mockEndTrip(tripId) {
 }
 
 export const mockRouteById = (id) => {
-  const r = ROUTES.find((x) => x.route_id === id)
+  // tolerate both mock ('R7') and live-API ('7') ids
+  const norm = (v) => String(v).trim().replace(/^R/i, '')
+  const r = ROUTES.find((x) => x.route_id === id || norm(x.route_id) === norm(id))
   if (!r) throw new Error('route not found')
   return r
 }

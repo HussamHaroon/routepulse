@@ -1,32 +1,66 @@
 @import 'tailwindcss';
 @import 'leaflet/dist/leaflet.css';
 
+/* ============================================================
+   ROUTEPULSE — "The printed timetable came alive"
+   Paper register for passengers, night register for /operator.
+   The 10-token palette; utilities keep their old names so every
+   screen re-registers instantly (ink=paper bg, snow=ink text).
+   ============================================================ */
 @theme {
-  --color-ink: #0b0f14;
-  --color-panel: #10161e;
-  --color-panel2: #151d27;
-  --color-edge: #1e2a36;
-  --color-fog: #8b98a5;
-  --color-snow: #e6edf3;
-  --color-phos: #22c55e;
-  --color-amber: #f59e0b;
-  --color-alert: #ef4444;
-  --color-cyan: #38bdf8;
+  /* v2 Living-Timetable tokens */
+  --color-paper: #f4efe4;
+  --color-paper-deep: #eae3d3;
+  --color-line2: #d9d1be;
+  --color-signal: #e4572e;
+  --color-live: #2e7d4f;
+  --color-late: #b3402e;
+  --color-night: #121417;
+  --color-night-ink: #e8e6de;
 
-  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* legacy utility names (all screens) → paper register values */
+  --color-ink: #f4efe4; /* page background = PAPER */
+  --color-panel: #eae3d3; /* paper-deep */
+  --color-panel2: color-mix(in srgb, #211d16 7%, #f4efe4); /* hover row */
+  --color-edge: #d9d1be; /* hairline rules */
+  --color-fog: #6e6656; /* ink-mute */
+  --color-snow: #211d16; /* text = INK */
+  --color-phos: #2e7d4f; /* live green */
+  --color-amber: #b3402e; /* late */
+  --color-alert: #b3402e; /* late */
+  --color-cyan: #e4572e; /* SIGNAL ORANGE accent */
+
+  --font-display: 'Zodiak', Georgia, 'Times New Roman', serif;
+  --font-text: 'Satoshi', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Sometype Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --ease-house: cubic-bezier(0.19, 1, 0.22, 1);
 }
 
 html,
 body {
   background: var(--color-ink);
   color: var(--color-snow);
-  font-family: var(--font-display);
+  font-family: var(--font-text);
 }
 
 body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Serif headlines everywhere a page didn't pin a font class */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+}
+
+/* House easing on every transition in the app */
+*,
+::before,
+::after {
+  transition-timing-function: var(--ease-house);
 }
 
 /* ---------- scrollbar ---------- */
@@ -35,116 +69,116 @@ body {
   height: 10px;
 }
 ::-webkit-scrollbar-track {
-  background: #0b0f14;
+  background: #eae3d3;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e2a36;
+  background: #d9d1be;
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2a3948;
+  background: #c8bfa8;
 }
 
-/* ---------- leaflet dark ---------- */
+/* ---------- leaflet: print-like light map (Positron tiles) ---------- */
+.leaflet-tile {
+  /* print-paper treatment on the passenger basemap */
+  filter: grayscale(0.35) sepia(0.16) brightness(1.03) contrast(0.94);
+}
+.night .leaflet-tile {
+  filter: none;
+}
 .leaflet-container {
-  background: #0b0f14;
+  background: #eae3d3;
   font-family: var(--font-mono);
   outline: none;
 }
 .leaflet-control-attribution {
-  background: rgba(11, 15, 20, 0.75) !important;
-  color: #5b6b7a !important;
+  background: rgba(244, 239, 228, 0.82) !important;
+  color: #6e6656 !important;
   font-size: 10px !important;
 }
 .leaflet-control-attribution a {
-  color: #8b98a5 !important;
+  color: #6e6656 !important;
 }
 .leaflet-bar,
 .leaflet-control-zoom a {
-  background: #10161e !important;
-  color: #22c55e !important;
-  border-color: #1e2a36 !important;
+  background: #f4efe4 !important;
+  color: #211d16 !important;
+  border-color: #d9d1be !important;
 }
 .leaflet-control-zoom a:hover {
-  background: #151d27 !important;
+  background: #eae3d3 !important;
 }
 .leaflet-popup-content-wrapper {
-  background: #10161e;
-  color: #e6edf3;
-  border: 1px solid #1e2a36;
-  border-radius: 8px;
+  background: #f4efe4;
+  color: #211d16;
+  border: 1px solid #d9d1be;
+  border-radius: 6px;
   font-family: var(--font-mono);
   font-size: 11px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  box-shadow: 4px 4px 0 rgba(33, 29, 22, 0.12);
 }
 .leaflet-popup-tip {
-  background: #10161e;
-  border: 1px solid #1e2a36;
+  background: #f4efe4;
+  border: 1px solid #d9d1be;
 }
 .leaflet-popup-close-button {
-  color: #8b98a5 !important;
+  color: #6e6656 !important;
 }
 .rp-stop-label {
   background: transparent;
   border: none;
   box-shadow: none;
-  color: #8b98a5;
+  color: #6e6656;
   font-family: var(--font-mono);
   font-size: 10px;
   font-weight: 600;
-  text-shadow: 0 1px 4px #000;
+  text-shadow:
+    0 1px 0 #f4efe4,
+    0 0 4px #f4efe4;
   padding: 0;
 }
 .rp-stop-label::before {
   display: none;
 }
 
-/* ---------- pulsing bus dot ---------- */
+/* ---------- heartbeat bus dots (signal ring, 2s pulse) ---------- */
 .rp-bus {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 9999px;
-  background: #22c55e;
-  border: 2px solid #0b0f14;
+  background: #2e7d4f;
+  border: 2px solid #f4efe4;
   box-shadow:
-    0 0 0 2px rgba(34, 197, 94, 0.35),
-    0 0 20px rgba(34, 197, 94, 0.9);
+    0 0 0 1.5px rgba(33, 29, 22, 0.55),
+    0 1px 6px rgba(33, 29, 22, 0.35);
   position: relative;
 }
 .rp-bus::after {
   content: '';
   position: absolute;
-  inset: -7px;
+  inset: -6px;
   border-radius: 9999px;
-  border: 2px solid rgba(34, 197, 94, 0.55);
-  animation: rp-pulse 1.6s ease-out infinite;
+  border: 2px solid rgba(228, 87, 46, 0.65); /* --signal heartbeat ring */
+  animation: rp-pulse 2s ease-out infinite;
 }
 .rp-bus.delayed {
-  background: #f59e0b;
-  box-shadow:
-    0 0 0 2px rgba(245, 158, 11, 0.35),
-    0 0 20px rgba(245, 158, 11, 0.9);
+  background: #b3402e;
 }
 .rp-bus.delayed::after {
-  border-color: rgba(245, 158, 11, 0.55);
+  border-color: rgba(179, 64, 46, 0.6);
 }
 .rp-bus.off {
-  background: #64748b;
-  box-shadow:
-    0 0 0 2px rgba(100, 116, 139, 0.3),
-    0 0 12px rgba(100, 116, 139, 0.6);
+  background: #6e6656;
 }
 .rp-bus.off::after {
   display: none;
 }
 .rp-bus.available {
-  background: #38bdf8;
-  box-shadow:
-    0 0 0 2px rgba(56, 189, 248, 0.3),
-    0 0 16px rgba(56, 189, 248, 0.8);
+  background: #e4572e;
 }
 .rp-bus.available::after {
-  border-color: rgba(56, 189, 248, 0.5);
+  border-color: rgba(228, 87, 46, 0.5);
 }
 @keyframes rp-pulse {
   0% {
@@ -171,7 +205,7 @@ body {
   animation: rp-blink 1.4s ease-in-out infinite;
 }
 
-/* ---------- skeleton shimmer ---------- */
+/* ---------- skeleton shimmer (paper) ---------- */
 @keyframes rp-shimmer {
   0% {
     background-position: -400px 0;
@@ -181,16 +215,167 @@ body {
   }
 }
 .rp-skel {
-  background: linear-gradient(90deg, #131b24 25%, #1b2531 50%, #131b24 75%);
+  background: linear-gradient(90deg, #eae3d3 25%, #f4efe4 50%, #eae3d3 75%);
   background-size: 800px 100%;
   animation: rp-shimmer 1.4s linear infinite;
   border-radius: 6px;
 }
 
-/* ---------- scanline grid hero ---------- */
+/* ---------- timetable paper grid (hero backdrop) ---------- */
 .rp-grid-bg {
   background-image:
-    linear-gradient(rgba(34, 197, 94, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(34, 197, 94, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(33, 29, 22, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(33, 29, 22, 0.05) 1px, transparent 1px);
   background-size: 44px 44px;
+}
+
+/* ---------- Pexels media sits in the paper register ---------- */
+.rp-warm {
+  filter: sepia(12%) contrast(1.02);
+}
+
+/* ---------- destination roll ---------- */
+.rp-roll {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-top: 1px solid var(--color-edge);
+  border-bottom: 1px solid var(--color-edge);
+  padding: 0.55rem 1rem;
+  position: relative;
+}
+.rp-roll::before,
+.rp-roll::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 12px;
+  transform: translateY(-50%);
+  background: var(--color-ink);
+  border: 1px solid var(--color-edge);
+}
+.rp-roll::before {
+  left: -4px;
+}
+.rp-roll::after {
+  right: -4px;
+}
+.rp-roll-window {
+  overflow: hidden;
+  height: 2.4rem;
+}
+.rp-roll-strip {
+  transition: transform 0.7s var(--ease-house);
+}
+.rp-roll-row {
+  height: 2.4rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  white-space: nowrap;
+}
+
+/* ---------- split-line hero reveal ---------- */
+.rp-split {
+  display: block;
+  overflow: hidden;
+}
+.rp-split > span {
+  display: block;
+  transform: translateY(110%);
+  animation: rp-rise 1.2s var(--ease-house) forwards;
+}
+@keyframes rp-rise {
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* ---------- SVG route draw-on ---------- */
+.rp-draw {
+  stroke-dasharray: var(--dash, 1200);
+  stroke-dashoffset: var(--dash, 1200);
+  animation: rp-draw 2.4s var(--ease-house) forwards;
+}
+@keyframes rp-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---------- NIGHT register (/operator control room) ---------- */
+.night {
+  --color-ink: #121417;
+  --color-panel: #191c20;
+  --color-panel2: #22262b;
+  --color-edge: #2a2f36;
+  --color-fog: #8b9096;
+  --color-snow: #e8e6de;
+  --color-phos: #4c9e6d;
+  --color-amber: #d46a4f;
+  --color-alert: #d46a4f;
+  --color-cyan: #e4572e;
+  background: var(--color-ink);
+  color: var(--color-snow);
+}
+.night .leaflet-container {
+  background: #121417;
+}
+.night .leaflet-control-attribution {
+  background: rgba(18, 20, 23, 0.8) !important;
+  color: #8b9096 !important;
+}
+.night .leaflet-control-attribution a {
+  color: #8b9096 !important;
+}
+.night .leaflet-bar,
+.night .leaflet-control-zoom a {
+  background: #191c20 !important;
+  color: #e8e6de !important;
+  border-color: #2a2f36 !important;
+}
+.night .leaflet-popup-content-wrapper {
+  background: #191c20;
+  color: #e8e6de;
+  border-color: #2a2f36;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+}
+.night .leaflet-popup-tip {
+  background: #191c20;
+  border-color: #2a2f36;
+}
+.night .rp-stop-label {
+  color: #8b9096;
+  text-shadow: 0 1px 4px #000;
+}
+.night .rp-bus {
+  border-color: #121417;
+}
+.night ::-webkit-scrollbar-track {
+  background: #121417;
+}
+.night ::-webkit-scrollbar-thumb {
+  background: #2a2f36;
+}
+
+/* ---------- reduced motion: calm the timetable ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .rp-bus::after,
+  .rp-blink,
+  .rp-skel {
+    animation: none !important;
+  }
+  .rp-roll-strip {
+    transition: none !important;
+  }
+  .rp-split > span {
+    animation: none !important;
+    transform: none !important;
+  }
+  .rp-draw {
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+    animation: none !important;
+  }
 }

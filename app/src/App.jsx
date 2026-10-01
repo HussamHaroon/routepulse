@@ -1,5 +1,6 @@
 import { HashRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
 import { createContext, useContext, useEffect, useState } from 'react'
+import Home from './pages/Home'
 import Search from './pages/Search'
 import Track from './pages/Track'
 import Driver from './pages/Driver'
@@ -10,7 +11,8 @@ const DemoCtx = createContext({ demo: true, setDemo: () => {} })
 export const useDemo = () => useContext(DemoCtx)
 
 const navItems = [
-  { to: '/', label: 'SEARCH' },
+  { to: '/', label: 'HOME' },
+  { to: '/search', label: 'LIVE TRACKING' },
   { to: '/driver', label: 'DRIVER' },
   { to: '/operator', label: 'OPERATOR' },
 ]
@@ -33,7 +35,11 @@ function Header() {
 
         <nav className="flex items-center gap-1">
           {navItems.map((n) => {
-            const active = n.to === '/' ? pathname === '/' || pathname.startsWith('/track') : pathname.startsWith(n.to)
+            const active =
+              n.to === '/'
+                ? pathname === '/'
+                : pathname.startsWith(n.to) ||
+                  (n.to === '/search' && pathname.startsWith('/track'))
             return (
               <NavLink
                 key={n.to}
@@ -79,7 +85,7 @@ function Footer() {
     <footer className="border-t border-edge py-6">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 font-mono text-[10px] uppercase tracking-[0.2em] text-fog sm:px-6">
         <span>routepulse · live transit tracking · hackathon build</span>
-        <span>map tiles © esri · data © openstreetmap contributors</span>
+        <span>map tiles © esri · map data © openstreetmap contributors</span>
       </div>
     </footer>
   )
@@ -94,20 +100,36 @@ export default function App() {
   return (
     <DemoCtx.Provider value={{ demo, setDemo }}>
       <HashRouter>
-        <div className="flex min-h-screen flex-col bg-ink text-snow">
-          <Header />
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
-            <Routes>
-              <Route path="/" element={<Search />} />
-              <Route path="/track/:routeId" element={<Track />} />
-              <Route path="/driver" element={<Driver />} />
-              <Route path="/operator" element={<Operator />} />
-              <Route path="*" element={<Search />} />
-            </Routes>
-          </main>
-          <Footer />
-        </div>
+        <Shell />
       </HashRouter>
     </DemoCtx.Provider>
+  )
+}
+
+// Inner shell — reads the location so the cinematic homepage renders
+// full-bleed while the tool screens keep the centered container.
+function Shell() {
+  const { pathname } = useLocation()
+  const home = pathname === '/'
+
+  return (
+    <div className="flex min-h-screen flex-col bg-ink text-snow">
+      <Header />
+      <main
+        className={
+          home ? 'w-full flex-1' : 'mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6'
+        }
+      >
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/search" element={<Search />} />
+          <Route path="/track/:routeId" element={<Track />} />
+          <Route path="/driver" element={<Driver />} />
+          <Route path="/operator" element={<Operator />} />
+          <Route path="*" element={<Home />} />
+        </Routes>
+      </main>
+      <Footer />
+    </div>
   )
 }

@@ -16,7 +16,7 @@ import {
   agoMin,
 } from '../components'
 
-const ROUTE_COLORS = { R7: '#22C55E', R5: '#38BDF8', R3: '#A78BFA', R9: '#F59E0B' }
+const ROUTE_COLORS = { R7: '#2E7D4F', R5: '#E4572E', R3: '#B3402E', R9: '#6E6656' }
 
 export default function Operator() {
   const { demo } = useDemo()
@@ -57,7 +57,7 @@ export default function Operator() {
 
   const allCoords = ROUTES.map((r) => ({
     coords: r.stops.map((s) => [s.lat, s.lng]),
-    color: ROUTE_COLORS[r.route_id] || '#22C55E',
+    color: ROUTE_COLORS[r.route_id] || '#2E7D4F',
     weight: 2,
     opacity: 0.35,
   }))
@@ -68,7 +68,7 @@ export default function Operator() {
   const s = stats.data
 
   return (
-    <div className="space-y-6">
+    <div className="night -mx-4 -my-6 space-y-6 px-4 py-6 sm:-mx-6 sm:px-6">
       {/* header */}
       <div className="flex flex-wrap items-center gap-3">
         <div>
@@ -89,16 +89,16 @@ export default function Operator() {
       {/* KPI row */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-7">
         <Kpi label="Total buses" value={s?.total_buses ?? '—'} loading={stats.loading} />
-        <Kpi label="Active" value={s?.active_buses ?? '—'} color="#22C55E" loading={stats.loading} />
-        <Kpi label="Delayed" value={s?.delayed_buses ?? '—'} color="#F59E0B" loading={stats.loading} />
+        <Kpi label="Active" value={s?.active_buses ?? '—'} color="#2E7D4F" loading={stats.loading} />
+        <Kpi label="Delayed" value={s?.delayed_buses ?? '—'} color="#E4572E" loading={stats.loading} />
         <Kpi label="Offline" value={s?.offline_buses ?? '—'} color="#EF4444" loading={stats.loading} />
-        <Kpi label="Routes running" value={s?.routes_running ?? '—'} color="#38BDF8" loading={stats.loading} />
+        <Kpi label="Routes running" value={s?.routes_running ?? '—'} color="#E4572E" loading={stats.loading} />
         <Kpi label="Trips today" value={s?.trips_today ?? '—'} loading={stats.loading} />
         <Kpi
           label="Avg delay"
           value={s?.avg_delay_min ?? '—'}
           suffix="min"
-          color="#F59E0B"
+          color="#E4572E"
           loading={stats.loading}
         />
       </section>
@@ -106,6 +106,7 @@ export default function Operator() {
       {/* fleet map + alert publisher */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_380px]">
         <MapView
+          night
           polylines={allCoords}
           stops={allStops}
           buses={locations}
@@ -233,7 +234,7 @@ export default function Operator() {
                   </td>
                   <td
                     className="px-4 py-3 font-bold"
-                    style={{ color: b.delay_minutes > 0 ? '#F59E0B' : '#8B98A5' }}
+                    style={{ color: b.delay_minutes > 0 ? '#E4572E' : '#8B98A5' }}
                   >
                     {b.delay_minutes > 0 ? `+${b.delay_minutes}m` : '0m'}
                   </td>

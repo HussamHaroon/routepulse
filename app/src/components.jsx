@@ -29,12 +29,12 @@ export const RouteChip = ({ route, big = false }) => (
 
 // ---------- status vocabulary ----------
 export const STATUS_COLORS = {
-  'On Route': '#22C55E',
-  Delayed: '#F59E0B',
-  Available: '#38BDF8',
+  'On Route': '#2E7D4F',
+  Delayed: '#E4572E',
+  Available: '#E4572E',
   Break: '#64748B',
   Offline: '#EF4444',
-  Completed: '#38BDF8',
+  Completed: '#E4572E',
   Cancelled: '#EF4444',
 }
 
@@ -54,9 +54,9 @@ export const StatusChip = ({ status }) => {
 // ---------- live source badge ----------
 export function LiveBadge({ source }) {
   const map = {
-    demo: { label: 'DEMO DATA', color: '#38BDF8', pulse: true },
-    ws: { label: 'LIVE · WS', color: '#22C55E', pulse: true },
-    poll: { label: 'LIVE · 3s POLL', color: '#22C55E', pulse: true },
+    demo: { label: 'DEMO DATA', color: '#E4572E', pulse: true },
+    ws: { label: 'LIVE · WS', color: '#2E7D4F', pulse: true },
+    poll: { label: 'LIVE · 3s POLL', color: '#2E7D4F', pulse: true },
     connecting: { label: 'CONNECTING…', color: '#8B98A5', pulse: true },
     offline: { label: 'OFFLINE', color: '#EF4444', pulse: false },
   }
@@ -149,7 +149,7 @@ function FitBounds({ fitKey }) {
  * stops:     [{ lat, lng, stop_name, stop_order }]
  * buses:     [{ bus_id, lat, lng, speed, delay_minutes, trip_status, next_stop }]
  */
-export function MapView({ polylines = [], stops = [], buses = [], fitKey, className = 'h-[420px]' }) {
+export function MapView({ polylines = [], stops = [], buses = [], fitKey, className = 'h-[420px]', night = false }) {
   return (
     <div className={`overflow-hidden rounded-xl border border-edge ${className}`}>
       <MapContainer
@@ -160,8 +160,12 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
         preferCanvas
       >
         <TileLayer
-          attribution='Tiles &copy; Esri — Source: Esri, HERE, Garmin &copy; OpenStreetMap contributors'
-          url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+          attribution='Tiles &copy; Esri &mdash; data &copy; OpenStreetMap contributors'
+          url={
+            night
+              ? 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+              : 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+          }
           maxZoom={16}
         />
         {polylines.map((p, i) => (
@@ -169,7 +173,7 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
             key={i}
             positions={p.coords}
             pathOptions={{
-              color: p.color || '#22C55E',
+              color: p.color || '#E4572E',
               weight: p.weight || 4,
               opacity: p.opacity ?? 0.75,
               dashArray: p.dashArray,
@@ -182,9 +186,9 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
             center={[s.lat, s.lng]}
             radius={6}
             pathOptions={{
-              color: '#22C55E',
+              color: '#211D16',
               weight: 2,
-              fillColor: '#0B0F14',
+              fillColor: '#F4EFE4',
               fillOpacity: 1,
             }}
           >
@@ -199,7 +203,7 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
             <Marker key={b.bus_id} position={[b.lat, b.lng]} icon={busIcon(b.trip_status)}>
               <Popup>
                 <div className="space-y-1">
-                  <div className="font-bold text-[#22C55E]">BUS {b.bus_id}</div>
+                  <div className="font-bold text-[#2E7D4F]">BUS {b.bus_id}</div>
                   <div>
                     {b.route_id ? `ROUTE ${String(b.route_id).replace('R', '')}` : 'NO ROUTE'}
                     {b.next_stop ? ` → ${b.next_stop}` : ''}
