@@ -73,7 +73,7 @@ function EtaRow({ stop, eta, remainSec }) {
 export default function Track() {
   const { routeId } = useParams()
   const { demo } = useDemo()
-  const { locations, source } = useLiveLocations(demo)
+  const { locations, source, lastAlert, crowdUpdates } = useLiveLocations(demo)
   const now = useTick(1000) // drives the visible countdown
 
   // route (static per page) — refetch if mock toggle flips
@@ -93,6 +93,38 @@ export default function Track() {
 
   // alerts — poll every 8s so operator publishes appear live
   const alerts = usePoll(() => getAlerts(routeId, demo), 8000, [routeId, demo])
+
+  // WS-pushed alerts land in <2s (no waiting for the poll) — the magic moment
+  const [wsAlerts, setWsAlerts] = useState([])
+  useEffect(() => {
+    setWsAlerts([])
+  }, [routeId, demo])
+  useEffect(() => {
+    if (!lastAlert) return
+    if (lastAlert.route_id && String(lastAlert.route_id) !== String(routeId)) return
+    setWsAlerts((list) =>
+      list.some((a) => a.alert_id === lastAlert.alert_id)
+        ? list
+        : [...list, { ...lastAlert, viaWs: true }]
+    )
+  }, [lastAlert, routeId])
+
+  // WS crowd frames update the chip instantly
+  useEffect(() => {
+    const f = crowdUpdates?.[routeId]
+    if (f) setCrowd({ level: f.level, updated_at: f.updated_at })
+  }, [crowdUpdates, routeId])
+
+  const allAlerts = useMemo(() => {
+    const seen = new Set()
+    const out = []
+    for (const a of [...wsAlerts, ...(alerts.data?.alerts ?? [])]) {
+      if (seen.has(a.alert_id)) continue
+      seen.add(a.alert_id)
+      out.push(a)
+    }
+    return out
+  }, [wsAlerts, alerts.data])
 
   // ETAs — poll every 6s; tick down locally between fetches
   const [etas, setEtas] = useState(null)
@@ -190,19 +222,21 @@ export default function Track() {
       </div>
 
       {/* alert banners */}
-      {alerts.data?.alerts?.length > 0 && (
+      {allAlerts.length > 0 && (
         <div className="space-y-2">
-          {alerts.data.alerts.map((a) => (
+          {allAlerts.map((a) => (
             <div
-              key={a.alert_id}
-              className="flex items-start gap-3 rounded-lg border-l-4 border-amber bg-amber/10 px-4 py-3"
+              key={`${a.alert_id}-${a.viaWs ? 'ws' : 'poll'}`}
+              className={`flex items-start gap-3 rounded-lg border-l-4 border-amber bg-amber/10 px-4 py-3 ${
+                a.viaWs ? 'rp-flash' : ''
+              }`}
             >
               <Mono className="shrink-0 text-[10px] font-extrabold tracking-widest text-amber">
-                [ SERVICE ALERT ]
+                {a.viaWs ? '[ JUST NOW · LIVE ]' : '[ SERVICE ALERT ]'}
               </Mono>
               <p className="flex-1 text-sm text-snow">{a.message}</p>
               <Mono className="shrink-0 text-[10px] text-fog">
-                {a.route_id ? `ROUTE ${a.route_id.replace('R', '')} · ` : 'ALL ROUTES · '}
+                {a.route_id ? `ROUTE ${String(a.route_id).replace('R', '')} · ` : 'ALL ROUTES · '}
                 {agoMin(a.created_at)} MIN AGO
               </Mono>
             </div>

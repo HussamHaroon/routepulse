@@ -9,6 +9,8 @@ export function useLiveLocations(mock) {
   const [state, setState] = useState({
     locations: [],
     source: mock ? 'demo' : 'connecting',
+    lastAlert: null, // WS 'alert' frame (the two-second magic moment)
+    crowdUpdates: {}, // route_id -> latest WS 'crowd' frame
   })
 
   useEffect(() => {
@@ -62,6 +64,14 @@ export function useLiveLocations(mock) {
             setState((s) => ({ ...s, locations: frame.locations || [], source: 'ws' }))
           } else if (frame.type === 'location') {
             upsert(frame)
+          } else if (frame.type === 'alert') {
+            // operator published a service alert — land it on screen in <2s
+            setState((s) => ({ ...s, lastAlert: frame, source: 'ws' }))
+          } else if (frame.type === 'crowd') {
+            setState((s) => ({
+              ...s,
+              crowdUpdates: { ...s.crowdUpdates, [frame.route_id]: frame },
+            }))
           } else if (frame.type === 'trip_ended') {
             setState((s) => ({
               ...s,

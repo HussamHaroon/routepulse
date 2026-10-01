@@ -192,7 +192,7 @@ export function MapView({ polylines = [], stops = [], buses = [], fitKey, classN
               fillOpacity: 1,
             }}
           >
-            <Tooltip permanent direction="right" offset={[8, 0]} className="rp-stop-label">
+            <Tooltip direction="right" offset={[8, 0]} className="rp-stop-label">
               {s.stop_order}. {s.stop_name}
             </Tooltip>
           </CircleMarker>

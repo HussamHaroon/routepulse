@@ -5,6 +5,7 @@ import Search from './pages/Search'
 import Track from './pages/Track'
 import Driver from './pages/Driver'
 import Operator from './pages/Operator'
+import NotFound from './pages/NotFound'
 
 // ---------- DEMO DATA toggle context (mock mode switch) ----------
 const DemoCtx = createContext({ demo: true, setDemo: () => {} })
@@ -12,7 +13,7 @@ export const useDemo = () => useContext(DemoCtx)
 
 const navItems = [
   { to: '/', label: 'HOME' },
-  { to: '/search', label: 'LIVE TRACKING' },
+  { to: '/search', label: 'SEARCH' },
   { to: '/driver', label: 'DRIVER' },
   { to: '/operator', label: 'OPERATOR' },
 ]
@@ -57,22 +58,19 @@ function Header() {
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
-          <span className="hidden font-mono text-[10px] uppercase tracking-[0.2em] text-fog sm:inline">
-            {demo ? 'mock feed' : 'live feed'}
-          </span>
           <button
             onClick={() => setDemo(!demo)}
-            title="Toggle between mock data and the live API"
+            title={demo ? 'Watching the offline demo simulator — click to go live' : 'Watching the live GPS feed — click to switch to the offline demo simulator'}
             className={`flex items-center gap-2 rounded-full border px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest transition ${
               demo
-                ? 'border-cyan/50 bg-cyan/10 text-cyan'
-                : 'border-edge bg-panel text-fog hover:text-snow'
+                ? 'border-amber/50 bg-amber/10 text-amber'
+                : 'border-live/50 bg-live/10 text-live'
             }`}
           >
             <span
-              className={`h-2 w-2 rounded-full ${demo ? 'bg-cyan rp-blink' : 'bg-fog'}`}
+              className={`h-2 w-2 rounded-full rp-blink ${demo ? 'bg-amber' : 'bg-live'}`}
             />
-            DEMO DATA {demo ? 'ON' : 'OFF'}
+            {demo ? 'DEMO DATA' : 'LIVE FEED'}
           </button>
         </div>
       </div>
@@ -152,7 +150,7 @@ function Shell() {
           <Route path="/track/:routeId" element={<Track />} />
           <Route path="/driver" element={<Driver />} />
           <Route path="/operator" element={<Operator />} />
-          <Route path="*" element={<Home />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
       <Footer />

@@ -191,6 +191,21 @@ h3 {
   }
 }
 
+/* ---------- fresh-alert flash (WS-pushed banners) ---------- */
+@keyframes rp-flash {
+  0% {
+    background-color: rgba(228, 87, 46, 0.4);
+    box-shadow: 0 0 0 3px rgba(228, 87, 46, 0.35);
+  }
+  100% {
+    background-color: rgba(179, 64, 46, 0.1);
+    box-shadow: 0 0 0 0 rgba(228, 87, 46, 0);
+  }
+}
+.rp-flash {
+  animation: rp-flash 0.9s ease-out 2;
+}
+
 /* ---------- live blink ---------- */
 @keyframes rp-blink {
   0%,
@@ -363,7 +378,8 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   .rp-bus::after,
   .rp-blink,
-  .rp-skel {
+  .rp-skel,
+  .rp-flash {
     animation: none !important;
   }
   .rp-roll-strip {
