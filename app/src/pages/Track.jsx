@@ -326,7 +326,7 @@ export default function Track() {
             polylines={[
               {
                 coords,
-                color: leadBus?.trip_status === 'Delayed' ? '#E4572E' : '#2E7D4F',
+                color: leadBus?.trip_status === 'Delayed' ? '#FF4757' : '#2ECC71',
               },
             ]}
             stops={route.stops}
