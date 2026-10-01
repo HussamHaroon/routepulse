@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import rateLimit from 'express-rate-limit';
 import { WebSocketServer } from 'ws';
 import { db } from './db.js';
+import { seedHistory } from './history.js';
 import {
   buildPolyline,
   projectOntoPolyline,
@@ -81,7 +82,17 @@ function loadLiveState() {
   const trips = db
     .prepare("SELECT * FROM trip WHERE trip_status IN ('On Route','Delayed')")
     .all();
+  let loaded = 0;
   for (const trip of trips) {
+    // Guard: a trip whose route is missing or has no stops (partial seed,
+    // spare bus with null route_id, platform-seeded DB) must never crash boot.
+    const firstStop = db
+      .prepare('SELECT lat, lng FROM stop WHERE route_id = ? ORDER BY stop_order LIMIT 1')
+      .get(trip.route_id);
+    if (!firstStop) {
+      console.warn(`[api] skipping trip ${trip.trip_id} (bus ${trip.bus_id}) — route ${trip.route_id} missing or has no stops; bus stays Available (no live state)`);
+      continue;
+    }
     tripByBus.set(trip.bus_id, trip);
     let lat = null;
     let lng = null;
@@ -93,9 +104,8 @@ function loadLiveState() {
       }
     }
     if (lat == null) {
-      const s = getRouteContext(trip.route_id).stops[0];
-      lat = s.lat;
-      lng = s.lng;
+      lat = firstStop.lat;
+      lng = firstStop.lng;
     }
     positions.set(trip.bus_id, {
       lat,
@@ -105,8 +115,9 @@ function loadLiveState() {
       trip_id: trip.trip_id,
       route_id: trip.route_id,
     });
+    loaded += 1;
   }
-  console.log(`[api] ${trips.length} active trip(s) loaded`);
+  console.log(`[api] ${loaded}/${trips.length} active trip(s) loaded`);
 }
 
 // ---------------------------------------------------------------------------
@@ -614,6 +625,13 @@ app.post('/api/trips/start', (req, res) => {
   if (!bus) return res.status(404).json({ ok: false, error: `bus ${bus_id} not found` });
   if (!driver) return res.status(404).json({ ok: false, error: `driver ${driver_id} not found` });
   if (!route) return res.status(404).json({ ok: false, error: `route ${route_id} not found` });
+  // Guard: a route with zero stops (bad/partial seed) can't anchor a trip.
+  const startStop = db
+    .prepare('SELECT lat, lng FROM stop WHERE route_id = ? ORDER BY stop_order LIMIT 1')
+    .get(route_id);
+  if (!startStop) {
+    return res.status(409).json({ ok: false, error: `route ${route_id} has no stops — cannot start a trip` });
+  }
 
   // Demo-friendly: silently close any previous active trip on this bus.
   const existing = tripByBus.get(bus_id);
@@ -627,11 +645,9 @@ app.post('/api/trips/start', (req, res) => {
 
   const trip = db.prepare('SELECT * FROM trip WHERE trip_id = ?').get(tripId);
   tripByBus.set(bus_id, trip);
-  const ctx = getRouteContext(route_id);
-  const s0 = ctx.stops[0];
   positions.set(bus_id, {
-    lat: s0.lat,
-    lng: s0.lng,
+    lat: startStop.lat,
+    lng: startStop.lng,
     speed: null,
     updated_at: new Date().toISOString(),
     trip_id: tripId,
