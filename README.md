@@ -8,7 +8,18 @@ Live public-transport tracking for Lahore: search a route, watch every bus move 
 
 ![Operator dashboard](screenshots/operator-dashboard.png)
 
-## Demo
+## Try it live (60-second tour)
+
+- **Live deployment:** https://routepulse-production-50c8.up.railway.app (API + WebSocket + app on one URL)
+- **Static demo (offline mock mode):** https://routepulse-pi.vercel.app
+- **Operator key** (for driver start-trip / GPS ingest / crowd reports): `routepulse-demo-key`
+
+1. Open [`/#/operator`](https://routepulse-production-50c8.up.railway.app/#/operator) — the night-shift control room: fleet KPIs, live map, active alerts.
+2. Open [`/#/track/3`](https://routepulse-production-50c8.up.railway.app/#/track/3) in a second window — buses tick along the corridor every 2 seconds; per-stop ETAs carry confidence ratings.
+3. Back in the operator tab, publish a service alert → watch it land on the passenger screen in **under two seconds** over WebSocket.
+4. Try [`/#/search`](https://routepulse-production-50c8.up.railway.app/#/search) — direct + transfer results, fares in PKR, favourite routes ★.
+
+## Demo (local)
 
 - Local: `npm install` at root, then `npm run dev` → app on :5173, API + GPS simulator on :8787
 - The app auto-detects the live feed; if the API is down it switches to an offline demo dataset and says so (badge in the header)
@@ -42,4 +53,4 @@ localhost:8787 (single URL: Express serves app/dist + API + WS)            SQLit
 
 ## Credits
 
-Media: [Pexels](https://www.pexels.com) (free license) · Map tiles © Esri, data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors · Fonts: Zodiak/Satoshi via Fontshare, Sometype Mono via Google Fonts (OFL) · Built at a hackathon in one day by Team Routepulse.
+Media: [Pexels](https://www.pexels.com) (free license) · Basemaps © [CARTO](https://carto.com/basemaps), data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributors · Fonts: Clash Display & Satoshi via Fontshare (ITF Free Font License), JetBrains Mono via Google Fonts (OFL) · Built at a hackathon in one day by Team Routepulse.

@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { getAlerts, getDrivers, getNetwork, getStats, publishAlert } from '../api'
+import {
+  getAlerts,
+  getDelayPatterns,
+  getDrivers,
+  getEtaAccuracy,
+  getNetwork,
+  getStats,
+  publishAlert,
+} from '../api'
 import { ROUTES, routeNumber } from '../mock'
 import { useLiveLocations, usePoll } from '../hooks'
 import { useDemo } from '../App'
@@ -39,6 +47,8 @@ export default function Operator() {
   const drivers = usePoll(() => getDrivers(demo), 15000, [demo])
   const allAlerts = usePoll(() => getAlerts(null, demo), 8000, [demo])
   const net = usePoll(() => getNetwork(demo), 30000, [demo])
+  const rhythm = usePoll(() => getDelayPatterns(demo), 60000, [demo])
+  const accuracy = usePoll(() => getEtaAccuracy(demo), 60000, [demo])
   const ROUTE_SET = net.data?.routes?.length ? net.data.routes : ROUTES
 
   // alert publisher state
@@ -210,6 +220,77 @@ export default function Operator() {
           </div>
         </aside>
       </div>
+
+      {/* delay rhythm + ETA accuracy — mined from completed-trip history (WP3) */}
+      {(rhythm.data?.patterns?.length || accuracy.data) && (
+        <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
+          <div className="overflow-hidden rounded-xl border border-edge bg-panel">
+            <div className="flex items-center justify-between border-b border-edge px-4 py-3">
+              <Mono className="text-xs font-bold tracking-[0.3em] text-fog">DELAY RHYTHM</Mono>
+              <Mono className="text-xs text-fog">MINED FROM COMPLETED TRIPS</Mono>
+            </div>
+            <div>
+              {(rhythm.data?.patterns || []).slice(0, 4).map((p) => (
+                <div
+                  key={p.route_id}
+                  className="flex items-start gap-3 border-b border-edge/40 px-4 py-3 last:border-0"
+                >
+                  <span
+                    className="w-10 shrink-0 pt-0.5 font-mono text-xs font-bold"
+                    style={{ color: ROUTE_COLORS[p.route_id] || '#8B98A5' }}
+                  >
+                    R{String(p.route_id).replace('R', '')}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-baseline gap-x-3">
+                      <span className="truncate text-xs text-snow">{p.route_name}</span>
+                      <span className="font-mono text-xs font-bold text-amber">
+                        WORST {String(p.worst_hour).padStart(2, '0')}:00 · +{p.worst_avg_delay_min}{' '}
+                        MIN AVG
+                      </span>
+                    </div>
+                    <div className="mt-0.5 font-mono text-xs leading-snug text-fog">
+                      {p.verdict}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {rhythm.loading && !rhythm.data && (
+                <div className="space-y-2 p-4">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-8 w-full" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-edge bg-panel p-5">
+            <Mono className="text-xs font-bold tracking-[0.3em] text-fog">ETA ACCURACY</Mono>
+            {accuracy.data ? (
+              <div className="mt-3 space-y-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-phos">
+                    {accuracy.data.within_2min_pct}%
+                  </span>
+                  <span className="font-mono text-xs text-fog">OF ETAS WITHIN 2 MIN</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-ink">
+                  <div
+                    className="h-full rounded-full bg-phos/70"
+                    style={{ width: `${accuracy.data.within_2min_pct}%` }}
+                  />
+                </div>
+                <div className="font-mono text-xs text-fog">
+                  {accuracy.data.samples} SAMPLES · MEDIAN ERROR{' '}
+                  {accuracy.data.median_error_min} MIN
+                </div>
+              </div>
+            ) : (
+              <Skeleton className="mt-3 h-16 w-full" />
+            )}
+          </div>
+        </section>
+      )}
 
       {/* fleet table */}
       <section className="overflow-hidden rounded-xl border border-edge bg-panel">

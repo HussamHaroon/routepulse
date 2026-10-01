@@ -136,8 +136,8 @@ function ResultCard({ route, locations, faved, onToggleFav }) {
 export default function Search() {
   const { demo } = useDemo()
   const { locations } = useLiveLocations(demo)
-  const [from, setFrom] = useState('City Center')
-  const [to, setTo] = useState('University Gate')
+  const [from, setFrom] = useState('Minar-e-Pakistan')
+  const [to, setTo] = useState('Kalma Chowk')
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -158,7 +158,7 @@ export default function Search() {
     }
   }
 
-  // auto-search the demo pair on load (City Center → University Gate)
+  // auto-search the demo pair on load (Minar-e-Pakistan → Kalma Chowk)
   useEffect(() => {
     run()
     // eslint-disable-next-line react-hooks/exhaustive-deps
