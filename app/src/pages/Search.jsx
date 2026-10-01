@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { searchRoutes } from '../api'
+import { getCrowd, searchRoutes } from '../api'
+import { getFavs, toggleFav } from '../favs'
 import { ALL_STOP_NAMES, haversineKm, routeNumber } from '../mock'
 import { useLiveLocations } from '../hooks'
 import { useDemo } from '../App'
@@ -20,7 +21,32 @@ function nextBusMinutes(locations, route, atStopName) {
   return Math.max(1, Math.round(Math.min(...etas)))
 }
 
-function ResultCard({ route, locations }) {
+// latest crowd report for a route (backend in-memory store)
+function CrowdChip({ routeId }) {
+  const [level, setLevel] = useState(null)
+  useEffect(() => {
+    let on = true
+    getCrowd(routeId, false)
+      .then((c) => on && setLevel(c.level))
+      .catch(() => {})
+    return () => {
+      on = false
+    }
+  }, [routeId])
+  if (!level) return null
+  const color = level === 'Packed' ? '#B3402E' : level === 'Seats full' ? '#E4572E' : '#2E7D4F'
+  return (
+    <span
+      className="rounded-md border px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest"
+      style={{ color, borderColor: `${color}55`, background: `${color}12` }}
+      title="Latest rider crowd report"
+    >
+      CROWD · {level.toUpperCase()}
+    </span>
+  )
+}
+
+function ResultCard({ route, locations, faved, onToggleFav }) {
   const isTransfer = !!route.transfer
   const mins = nextBusMinutes(locations, route, route.start_location)
   return (
@@ -34,6 +60,20 @@ function ResultCard({ route, locations }) {
     >
       <div className="flex flex-wrap items-center gap-3">
         <RouteChip route={route} big />
+        <button
+          onClick={(e) => {
+            e.preventDefault()
+            onToggleFav(route.route_id)
+          }}
+          title={faved ? 'Remove from favorites' : 'Save route to favorites'}
+          className={`rounded-md border px-2 py-1 font-mono text-xs transition ${
+            faved
+              ? 'border-signal/60 bg-signal/10 text-signal'
+              : 'border-edge bg-panel text-fog hover:border-signal/50 hover:text-signal'
+          }`}
+        >
+          {faved ? '★' : '☆'}
+        </button>
         {isTransfer ? (
           <span className="rounded-md border border-amber/40 bg-amber/10 px-2 py-0.5 font-mono text-[10px] font-bold tracking-widest text-amber">
             TRANSFER
@@ -43,6 +83,7 @@ function ResultCard({ route, locations }) {
             DIRECT
           </span>
         )}
+        <CrowdChip routeId={route.route_id} />
         <span className="ml-auto font-mono text-xs text-fog">
           {mins != null ? (
             <>
@@ -61,6 +102,12 @@ function ResultCard({ route, locations }) {
       <div className="mt-1 font-mono text-xs text-fog">
         {route.stops?.length ?? 0} STOPS · {route.start_location} →{' '}
         {route.destination}
+        {route.fare_pkr != null && (
+          <>
+            {' '}
+            · <span className="font-bold text-snow">PKR {route.fare_pkr}</span>
+          </>
+        )}
       </div>
 
       {isTransfer && (
@@ -93,6 +140,8 @@ export default function Search() {
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [favs, setFavs] = useState(getFavs)
+  const [favOnly, setFavOnly] = useState(false)
 
   const stops = useMemo(() => ALL_STOP_NAMES, [])
 
@@ -208,18 +257,47 @@ export default function Search() {
         {loading &&
           [0, 1].map((i) => <Skeleton key={i} className="h-36 w-full" />)}
 
+        {!loading && results && (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setFavOnly((v) => !v)}
+              className={`rounded-md border px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest transition ${
+                favOnly
+                  ? 'border-signal/60 bg-signal/10 text-signal'
+                  : 'border-edge bg-panel text-fog hover:text-snow'
+              }`}
+              title="Show only saved routes"
+            >
+              ★ FAVORITES{favs.length ? ` (${favs.length})` : ''}
+            </button>
+            {favOnly && favs.length === 0 && (
+              <span className="font-mono text-[10px] text-fog">
+                no saved routes yet — tap ☆ on a route card
+              </span>
+            )}
+          </div>
+        )}
+
         {!loading && results && results.routes.length === 0 && (
           <div className="rounded-xl border border-edge bg-panel p-8 text-center">
             <div className="font-mono text-sm text-fog">
-              No direct route found — and no transfer combo available for this pair.
+              No service runs on this stretch — try a transfer.
             </div>
           </div>
         )}
 
         {!loading &&
-          results?.routes.map((r) => (
-            <ResultCard key={`${r.route_id}-${r.transfer ? 'T' : 'D'}`} route={r} locations={locations} />
-          ))}
+          results
+            ?.routes.filter((r) => !favOnly || favs.includes(String(r.route_id)))
+            .map((r) => (
+              <ResultCard
+                key={`${r.route_id}-${r.transfer ? 'T' : 'D'}`}
+                route={r}
+                locations={locations}
+                faved={favs.includes(String(r.route_id))}
+                onToggleFav={(id) => setFavs(toggleFav(id))}
+              />
+            ))}
       </section>
     </div>
   )

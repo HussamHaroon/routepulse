@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getAlerts, getEtas, getRoute } from '../api'
+import { getAlerts, getCrowd, getEtas, getRoute, reportCrowd } from '../api'
 import { useLiveLocations, usePoll, useTick } from '../hooks'
 import { useDemo } from '../App'
 import { agoMin, ErrorBanner, LiveBadge, MapView, Mono, RouteChip, Skeleton, StatusChip } from '../components'
+
+// backend crowd levels: 'empty' | 'seats' | 'packed'
+const CROWD_LEVELS = [
+  { label: 'EMPTY', value: 'empty' },
+  { label: 'SEATS FULL', value: 'seats' },
+  { label: 'PACKED', value: 'packed' },
+]
 
 // ETA confidence chip — the novelty twist.
 // high: "±1 · HIGH", medium: "±3 · MEDIUM", low/missing → "ESTIMATING…"
@@ -116,6 +123,26 @@ export default function Track() {
   )
   const leadBus = routeBuses[0]
 
+  // crowd report (P1): latest level + send a new one
+  const [crowd, setCrowd] = useState(null)
+  const [crowdSent, setCrowdSent] = useState(false)
+  useEffect(() => {
+    let on = true
+    setCrowdSent(false)
+    getCrowd(routeId, demo)
+      .then((c) => on && setCrowd(c))
+      .catch(() => {})
+    return () => {
+      on = false
+    }
+  }, [routeId, demo])
+  const sendCrowd = (level) => {
+    setCrowdSent(true)
+    return reportCrowd(routeId, level, demo)
+      .then((r) => setCrowd({ level: r.level, updated_at: r.updated_at }))
+      .catch(() => {})
+  }
+
   const coords = useMemo(
     () => route?.stops?.map((s) => [s.lat, s.lng]) ?? [],
     [route]
@@ -152,6 +179,11 @@ export default function Track() {
           {route.route_name}
         </h1>
         <div className="ml-auto flex items-center gap-2">
+          {route.fare_pkr != null && (
+            <span className="rounded-md border border-edge bg-panel px-2 py-1 font-mono text-[10px] font-bold tracking-widest text-fog">
+              FARE PKR {route.fare_pkr}
+            </span>
+          )}
           <LiveBadge source={demo ? 'demo' : source} />
           {leadBus && <StatusChip status={leadBus.trip_status} />}
         </div>
@@ -215,6 +247,36 @@ export default function Track() {
               </div>
             ))}
           </div>
+          {/* crowd report (P1) */}
+          <div className="rounded-xl border border-edge bg-panel px-4 py-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <Mono className="text-[10px] font-bold tracking-[0.3em] text-fog">
+                [ HOW CROWDED? ]
+              </Mono>
+              <div className="flex gap-2">
+                {CROWD_LEVELS.map(({ label, value }) => (
+                  <button
+                    key={value}
+                    onClick={() => sendCrowd(value)}
+                    className={`rounded-md border px-3 py-1.5 font-mono text-[10px] font-bold tracking-widest transition ${
+                      crowd?.level === value
+                        ? 'border-signal/60 bg-signal/10 text-signal'
+                        : 'border-edge bg-panel2 text-fog hover:border-signal/50 hover:text-signal'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <Mono className="ml-auto text-[10px] text-fog">
+                {crowd?.level
+                  ? `LATEST · ${crowd.level.toUpperCase()}${crowd.updated_at ? ` · ${agoMin(crowd.updated_at)} MIN AGO` : ''}`
+                  : crowdSent
+                    ? 'SENDING…'
+                    : 'NO REPORTS YET'}
+              </Mono>
+            </div>
+          </div>
         </div>
 
         {/* ETA sidebar */}
@@ -227,6 +289,17 @@ export default function Track() {
               {etas ? 'TICKING' : 'LOADING…'}
             </Mono>
           </div>
+          {(() => {
+            const up = etas?.find((e) => (e.distance_km ?? 0) > 0.05)
+            if (!up) return null
+            const walkMin = Math.max(1, Math.ceil((up.distance_km / 5) * 60))
+            return (
+              <div className="border-b border-edge px-4 py-2 font-mono text-[10px] tracking-widest text-fog">
+                WALK TO {String(up.stop_name).toUpperCase()} ≈{' '}
+                <span className="font-bold text-snow">{walkMin} MIN</span> (5 KM/H)
+              </div>
+            )
+          })()}
           {etaErr && (
             <div className="p-3">
               <ErrorBanner error={etaErr} onRetry={() => setFetchedAt(0)} />

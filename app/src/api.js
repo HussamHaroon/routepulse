@@ -7,15 +7,23 @@ import * as m from './mock'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 const TIMEOUT_MS = 4000
+// mutating endpoints require the operator key (see api/server.js)
+const OPERATOR_KEY = import.meta.env.VITE_OPERATOR_KEY || 'routepulse-demo-key'
 
 async function j(path, opts = {}) {
   const ctrl = new AbortController()
   const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
+  const { headers = {}, ...rest } = opts
+  const method = (rest.method || 'GET').toUpperCase()
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       signal: ctrl.signal,
-      headers: { 'Content-Type': 'application/json' },
-      ...opts,
+      ...rest,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(method !== 'GET' ? { 'x-api-key': OPERATOR_KEY } : {}),
+        ...headers,
+      },
     })
     if (!res.ok) throw new Error(`API ${res.status} ${path}`)
     return await res.json()
@@ -32,10 +40,55 @@ const qs = (o) =>
     .join('&')
 
 // ---- routes / search ----
+// Live responses are normalized to the row shape the UI consumes
+// (stop objects, transfer rows) so mock and live feed one code path.
 export const searchRoutes = (from, to, mock) =>
   mock
     ? Promise.resolve(m.mockSearch(from, to))
-    : j(`/api/routes${qs({ from, to })}`)
+    : j(`/api/routes${qs({ from, to })}`).then((res) => {
+        if (Array.isArray(res?.routes)) {
+          const rows = res.routes.map((r) => ({
+            ...r,
+            stops: (r.stops ?? []).map((s, i) =>
+              typeof s === 'string'
+                ? { stop_id: `${r.route_id}_s${i + 1}`, stop_name: s, stop_order: i + 1 }
+                : s
+            ),
+          }))
+          // search rows are name-only — enrich with fares + stop coordinates
+          return Promise.all(
+            rows.map((r) =>
+              j(`/api/routes/${encodeURIComponent(r.route_id)}`)
+                .then((full) => ({
+                  ...r,
+                  ...full,
+                  stops: full.stops?.length ? full.stops : r.stops,
+                }))
+                .catch(() => r)
+            )
+          ).then((routes) => ({ routes }))
+        }
+        if (res?.transfer) {
+          const t = res.transfer
+          return {
+            routes: [
+              {
+                route_id: t.second?.route_id,
+                route_name: t.second?.route_name,
+                start_location: t.via_stop,
+                destination: '',
+                stops: [],
+                transfer: {
+                  via_stop: t.via_stop,
+                  then_route_id: t.second?.route_id,
+                  then_route_name: t.second?.route_name,
+                },
+              },
+            ],
+          }
+        }
+        return { routes: [] }
+      })
 
 export const getRoute = (id, mock) =>
   mock ? Promise.resolve(m.mockRouteById(id)) : j(`/api/routes/${encodeURIComponent(id)}`)
@@ -109,3 +162,17 @@ export const WS_URL = (() => {
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
   return `${proto}//${window.location.host}/ws`
 })()
+
+// ---- crowd reports (P1) ----
+export const reportCrowd = (routeId, level, mock) =>
+  mock
+    ? Promise.resolve({ ok: true, route_id: routeId, level })
+    : j(`/api/routes/${encodeURIComponent(routeId)}/crowd`, {
+        method: 'POST',
+        body: JSON.stringify({ level }),
+      })
+
+export const getCrowd = (routeId, mock) =>
+  mock
+    ? Promise.resolve({ level: null, updated_at: null })
+    : j(`/api/routes/${encodeURIComponent(routeId)}/crowd`)
