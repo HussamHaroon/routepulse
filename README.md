@@ -10,6 +10,7 @@ Live public-transport tracking for Lahore: search a route, watch every bus move 
 
 ## Try it live (60-second tour)
 
+- **Product video (71s, narrated):** [`screenshots/demo.mp4`](screenshots/demo.mp4)
 - **Live deployment:** https://routepulse-production-50c8.up.railway.app (API + WebSocket + app on one URL)
 - **Static demo (offline mock mode):** https://routepulse-pi.vercel.app
 - **Operator key** (for driver start-trip / GPS ingest / crowd reports): `routepulse-demo-key`
