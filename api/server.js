@@ -2,11 +2,11 @@
 // Port 8787. DB auto-created and seeded by ./db.js on first run.
 
 import express from 'express';
-import cors from 'cors';
 import http from 'node:http';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import rateLimit from 'express-rate-limit';
 import { WebSocketServer } from 'ws';
 import { db } from './db.js';
 import {
@@ -27,8 +27,27 @@ const SIMULATE = process.env.SIMULATE !== '0';
 const SIM_BASE_KMH = Number(process.env.SIM_SPEED_KMH || 28);
 const SIM_INTERVAL_MS = 2000;
 
+const OPERATOR_KEY = process.env.OPERATOR_KEY || 'routepulse-demo-key';
+
 const app = express();
-app.use(cors());
+app.set('trust proxy', 1); // behind Render's proxy → correct client IPs for rate limiting
+app.disable('x-powered-by');
+
+// F-03 (SECURITY_FINDINGS.md): rate limiting — 300 req/15min per IP across /api,
+// looser bucket for machine GPS ingest (driver phone / external simulator).
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 300, standardHeaders: true, legacyHeaders: false });
+const ingestLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1200, standardHeaders: true, legacyHeaders: false });
+app.use('/api/ingest', ingestLimiter);
+app.use('/api', apiLimiter);
+
+// F-01: mutating (non-GET) /api calls require the operator key.
+// GETs and the WS feed stay public — passenger screens are read-only.
+app.use('/api', (req, res, next) => {
+  if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
+  if (req.get('x-api-key') === OPERATOR_KEY) return next();
+  return res.status(401).json({ error: 'unauthorized — send x-api-key header' });
+});
+
 app.use(express.json());
 
 // ---------------------------------------------------------------------------
@@ -38,6 +57,11 @@ const positions = new Map(); // bus_id -> { lat, lng, speed, updated_at, trip_id
 const tripByBus = new Map(); // bus_id  -> live trip row (trip_status 'On Route'|'Delayed')
 const routeStats = new Map(); // route_id -> { ema, samples, recent[] }  (EMA of observed speeds)
 const routeCtx = new Map(); // route_id -> { stops, poly }
+
+// WP2: crowd reporting — latest level per route, in-memory (resets on restart).
+const crowdByRoute = new Map(); // route_id -> { level, updated_at }
+const CROWD_LEVELS = ['empty', 'seats', 'packed'];
+const crowdOf = (routeId) => crowdByRoute.get(routeId)?.level ?? null;
 
 function getRouteContext(routeId) {
   let ctx = routeCtx.get(routeId);
@@ -270,10 +294,8 @@ app.get('/api/routes', (req, res) => {
   if (!from || !to) {
     return res.json({
       routes: allRoutes.map((r) => ({
-        route_id: r.route_id,
-        route_name: r.route_name,
-        start_location: r.start_location,
-        destination: r.destination,
+        ...r,
+        crowd: crowdOf(r.route_id),
       })),
     });
   }
@@ -290,6 +312,8 @@ app.get('/api/routes', (req, res) => {
         route_name: r.route_name,
         start_location: r.start_location,
         destination: r.destination,
+        fare_pkr: r.fare_pkr,
+        crowd: crowdOf(r.route_id),
         stops: stops.map((s) => s.stop_name), // ordered stop names
       });
     }
@@ -311,11 +335,29 @@ app.get('/api/routes', (req, res) => {
         if (xj !== -1 && xj < tj) {
           return res.json({
             direct: false,
+            // legacy top-level shape, kept for compat
             transfer: {
               via_stop: via,
               first: { route_id: ra.route_id, route_name: ra.route_name },
               second: { route_id: rb.route_id, route_name: rb.route_name },
             },
+            // contract shape: first-leg route with transfer directions attached
+            routes: [
+              {
+                route_id: ra.route_id,
+                route_name: ra.route_name,
+                start_location: ra.start_location,
+                destination: ra.destination,
+                fare_pkr: ra.fare_pkr,
+                crowd: crowdOf(ra.route_id),
+                stops: sa.map((s) => s.stop_name),
+                transfer: {
+                  via_stop: via,
+                  then_route_id: rb.route_id,
+                  then_route_name: rb.route_name,
+                },
+              },
+            ],
           });
         }
       }
@@ -330,7 +372,32 @@ app.get('/api/routes/:id', (req, res) => {
   const stops = db
     .prepare('SELECT stop_id, stop_name, lat, lng, stop_order FROM stop WHERE route_id = ? ORDER BY stop_order')
     .all(r.route_id);
-  res.json({ ...r, stops });
+  res.json({ ...r, stops, crowd: crowdOf(r.route_id) });
+});
+
+// ---------------------------------------------------------------------------
+// WP2: crowd reporting — POST latest level per route (in-memory), GET returns it
+// ---------------------------------------------------------------------------
+app.post('/api/routes/:id/crowd', (req, res) => {
+  const route = db.prepare('SELECT route_id FROM route WHERE route_id = ?').get(req.params.id);
+  if (!route) return res.status(404).json({ error: 'route not found' });
+  const { level } = req.body || {};
+  if (!CROWD_LEVELS.includes(level)) {
+    return res.status(400).json({ ok: false, error: `level must be one of: ${CROWD_LEVELS.join(' | ')}` });
+  }
+  const entry = { level, updated_at: new Date().toISOString() };
+  crowdByRoute.set(route.route_id, entry);
+  broadcast({ type: 'crowd', route_id: route.route_id, level, updated_at: entry.updated_at });
+  res.json({ ok: true, route_id: route.route_id, level: entry.level, updated_at: entry.updated_at });
+});
+
+app.get('/api/routes/:id/crowd', (req, res) => {
+  const entry = crowdByRoute.get(req.params.id);
+  res.json({
+    route_id: req.params.id,
+    level: entry?.level ?? null,
+    updated_at: entry?.updated_at ?? null,
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -664,6 +731,12 @@ app.use((err, _req, res, _next) => {
 
 // ---------------------------------------------------------------------------
 loadLiveState();
+
+// WP2: seed a few crowd levels so the UI shows data before the first report.
+const crowdBootIso = new Date().toISOString();
+for (const [rid, lvl] of [['7', 'seats'], ['5', 'packed'], ['3', 'seats'], ['9', 'empty']]) {
+  crowdByRoute.set(rid, { level: lvl, updated_at: crowdBootIso });
+}
 
 // ---------------------------------------------------------------------------
 // In-process GPS simulator (SIMULATE !== '0') — replaces the separate

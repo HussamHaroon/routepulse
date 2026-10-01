@@ -35,7 +35,8 @@ CREATE TABLE IF NOT EXISTS route (
   start_location TEXT,
   destination   TEXT,
   estimated_duration_min INTEGER,
-  active_status INTEGER
+  active_status INTEGER,
+  fare_pkr      INTEGER
 );
 CREATE TABLE IF NOT EXISTS stop (
   stop_id       TEXT PRIMARY KEY,
@@ -65,13 +66,24 @@ CREATE TABLE IF NOT EXISTS alert (
 );
 `);
 
+// Migration for DBs created before WP2: add fare_pkr to route if missing.
+{
+  const cols = db.prepare('PRAGMA table_info(route)').all().map((c) => c.name);
+  if (!cols.includes('fare_pkr')) {
+    db.exec('ALTER TABLE route ADD COLUMN fare_pkr INTEGER');
+    console.log('[db] migrated route table: + fare_pkr');
+  }
+}
+
 const ROUTES = [
+  // [route] stops: [name, lat, lng] — Lahore coords (31.52–31.58 / 74.29–74.40)
   {
     route_id: '7',
     route_name: 'City Center → University Gate',
     start_location: 'City Center',
     destination: 'University Gate',
     estimated_duration_min: 35,
+    fare_pkr: 25,
     stops: [
       ['City Center', 31.5582, 74.3507],
       ['Shimla Pahar', 31.562, 74.342],
@@ -87,6 +99,7 @@ const ROUTES = [
     start_location: 'Central Station',
     destination: 'Bus Terminal',
     estimated_duration_min: 42,
+    fare_pkr: 40,
     stops: [
       ['Central Station', 31.572, 74.352],
       ['Lakshmi Chowk', 31.565, 74.344],
@@ -102,6 +115,7 @@ const ROUTES = [
     start_location: 'Airport',
     destination: 'City Center',
     estimated_duration_min: 48,
+    fare_pkr: 50,
     stops: [
       ['Airport', 31.521, 74.403],
       ['Cohsala', 31.532, 74.387],
@@ -117,6 +131,7 @@ const ROUTES = [
     start_location: 'City Center',
     destination: 'University Gate',
     estimated_duration_min: 30,
+    fare_pkr: 35,
     stops: [
       ['City Center', 31.5582, 74.3507],
       ['Canal Bank', 31.554, 74.338],
@@ -124,6 +139,68 @@ const ROUTES = [
       ['Multan Chungi', 31.552, 74.312],
       ['Campus Gate', 31.559, 74.309],
       ['University Gate', 31.5645, 74.3075],
+    ],
+  },
+  // --- WP2 additions: 4 new routes (~40 stops network-wide) ---
+  {
+    route_id: '1',
+    route_name: 'Airport → Bus Terminal',
+    start_location: 'Airport',
+    destination: 'Bus Terminal',
+    estimated_duration_min: 58,
+    fare_pkr: 60,
+    stops: [
+      ['Airport', 31.521, 74.403],
+      ['Cohsala', 31.532, 74.387],
+      ['Ghazi Road', 31.543, 74.374],
+      ['Kot Lakhpat', 31.535, 74.346],
+      ['Model Town', 31.53, 74.329],
+      ['Bus Terminal', 31.529, 74.318],
+    ],
+  },
+  {
+    route_id: '2',
+    route_name: 'Railway Station → Main Market',
+    start_location: 'Railway Station',
+    destination: 'Main Market',
+    estimated_duration_min: 25,
+    fare_pkr: 20,
+    stops: [
+      ['Railway Station', 31.5703, 74.333],
+      ['Bhatti Chowk', 31.568, 74.338],
+      ['Lakshmi Chowk', 31.565, 74.344],
+      ['Nila Gumbad', 31.56, 74.342],
+      ['Main Market', 31.556, 74.34],
+    ],
+  },
+  {
+    route_id: '6',
+    route_name: 'Canal → City Center',
+    start_location: 'Thokar Niaz Baig',
+    destination: 'City Center',
+    estimated_duration_min: 38,
+    fare_pkr: 30,
+    stops: [
+      ['Thokar Niaz Baig', 31.533, 74.312],
+      ['Canal Side', 31.544, 74.325],
+      ['Canal Bank', 31.554, 74.338],
+      ['Shadman', 31.559, 74.345],
+      ['City Center', 31.5582, 74.3507],
+    ],
+  },
+  {
+    route_id: '12',
+    route_name: 'University Gate → Main Market',
+    start_location: 'University Gate',
+    destination: 'Main Market',
+    estimated_duration_min: 36,
+    fare_pkr: 30,
+    stops: [
+      ['University Gate', 31.5645, 74.3075],
+      ['Campus Gate', 31.559, 74.309],
+      ['Muslim Town', 31.553, 74.317],
+      ['Civil Lines', 31.548, 74.332],
+      ['Main Market', 31.556, 74.34],
     ],
   },
 ];
@@ -147,27 +224,42 @@ const DRIVERS = [
   ['D-05', 'Zafar', '+92-304-5678901', null, 'Available'],
 ];
 
-function seedIfEmpty() {
-  const hasRoutes = db.prepare('SELECT COUNT(*) AS n FROM route').get().n > 0;
-  if (hasRoutes) return;
+/** Routes/stops seed — idempotent (INSERT OR IGNORE), so existing DBs grow into
+ *  the new network without wiping trips/alerts. Fares are refreshed each boot. */
+function seedRoutesAndStops() {
+  const insRoute = db.prepare(
+    'INSERT OR IGNORE INTO route (route_id, route_name, start_location, destination, estimated_duration_min, active_status, fare_pkr) VALUES (?,?,?,?,?,1,?)'
+  );
+  const insStop = db.prepare(
+    'INSERT OR IGNORE INTO stop (stop_id, route_id, stop_name, lat, lng, stop_order) VALUES (?,?,?,?,?,?)'
+  );
+  const updFare = db.prepare('UPDATE route SET fare_pkr = ? WHERE route_id = ?');
+  const tx = db.transaction(() => {
+    let stopsAdded = 0;
+    for (const r of ROUTES) {
+      insRoute.run(r.route_id, r.route_name, r.start_location, r.destination, r.estimated_duration_min, r.fare_pkr);
+      updFare.run(r.fare_pkr, r.route_id);
+      r.stops.forEach(([name, lat, lng], i) => {
+        const info = insStop.run(`${r.route_id}_s${i + 1}`, r.route_id, name, lat, lng, i + 1);
+        stopsAdded += info.changes;
+      });
+    }
+    return stopsAdded;
+  });
+  const added = tx();
+  const nRoutes = db.prepare('SELECT COUNT(*) AS n FROM route').get().n;
+  const nStops = db.prepare('SELECT COUNT(*) AS n FROM stop').get().n;
+  if (added > 0) console.log(`[db] route seed: +${added} stops → now ${nRoutes} routes, ${nStops} route-stops`);
+}
+
+function seedFleetOnce() {
+  const hasFleet = db.prepare('SELECT COUNT(*) AS n FROM bus').get().n > 0;
+  if (hasFleet) return;
 
   const now = Date.now();
   const iso = (msAgo) => new Date(now - msAgo).toISOString();
 
   const seed = db.transaction(() => {
-    const insRoute = db.prepare(
-      'INSERT INTO route (route_id, route_name, start_location, destination, estimated_duration_min, active_status) VALUES (?,?,?,?,?,1)'
-    );
-    const insStop = db.prepare(
-      'INSERT INTO stop (stop_id, route_id, stop_name, lat, lng, stop_order) VALUES (?,?,?,?,?,?)'
-    );
-    for (const r of ROUTES) {
-      insRoute.run(r.route_id, r.route_name, r.start_location, r.destination, r.estimated_duration_min);
-      r.stops.forEach(([name, lat, lng], i) => {
-        insStop.run(`${r.route_id}_s${i + 1}`, r.route_id, name, lat, lng, i + 1);
-      });
-    }
-
     const insBus = db.prepare(
       'INSERT INTO bus (bus_id, bus_number, vehicle_number, capacity, driver_id, route_id, status) VALUES (?,?,?,?,?,?,?)'
     );
@@ -192,7 +284,7 @@ function seedIfEmpty() {
     insAlert.run(null, 'Bus 14 ended trip — vehicle issue', iso(90 * 60 * 1000), 0);
   });
   seed();
-  console.log('[db] seeded 4 routes, 24 stops, 6 buses, 5 drivers, 3 alerts');
+  console.log('[db] seeded fleet: 6 buses, 5 drivers, 3 alerts');
 }
 
 /** Create the 4 initial "On Route" trips (once) so the simulator has work. */
@@ -235,5 +327,6 @@ export function seedInitialTrips() {
   if (created.length) console.log(`[db] seeded ${created.length} active trips`);
 }
 
-seedIfEmpty();
+seedRoutesAndStops();
+seedFleetOnce();
 seedInitialTrips();
