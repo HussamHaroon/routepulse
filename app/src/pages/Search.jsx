@@ -163,6 +163,7 @@ export default function Search() {
   const [error, setError] = useState(null)
   const [favs, setFavs] = useState(getFavs)
   const [favOnly, setFavOnly] = useState(false)
+  const [sameStop, setSameStop] = useState(false)
 
   // Stop list must match the active feed: the mock network and the live
   // database have completely different stop names, and offering mock names
@@ -191,6 +192,15 @@ export default function Search() {
   }, [demo])
 
   const run = async (f = from, t = to) => {
+    // Same pickup and drop — nothing to plan; skip the API entirely.
+    if (String(f).trim().toLowerCase() === String(t).trim().toLowerCase()) {
+      setSameStop(true)
+      setResults(null)
+      setError(null)
+      setLoading(false)
+      return
+    }
+    setSameStop(false)
     setLoading(true)
     setError(null)
     try {
@@ -337,6 +347,14 @@ export default function Search() {
                 no saved routes yet — tap ☆ on a route card
               </span>
             )}
+          </div>
+        )}
+
+        {!loading && sameStop && (
+          <div className="rounded-xl border border-edge bg-panel p-8 text-center">
+            <div className="font-mono text-sm text-fog">
+              Same pickup and drop — pick two different stops to plan a trip.
+            </div>
           </div>
         )}
 

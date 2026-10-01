@@ -130,6 +130,7 @@ export default function Track() {
   const [etas, setEtas] = useState(null)
   const [fetchedAt, setFetchedAt] = useState(0)
   const [etaErr, setEtaErr] = useState(null)
+  const [etasNote, setEtasNote] = useState(null)
   const [etaRetry, setEtaRetry] = useState(0)
   useEffect(() => {
     let live = true
@@ -138,6 +139,7 @@ export default function Track() {
         .then((d) => {
           if (!live) return
           setEtas(d.etas || [])
+          setEtasNote(d.reason || null)
           setFetchedAt(Date.now())
           setEtaErr(null)
         })
@@ -494,6 +496,12 @@ export default function Track() {
           {etaErr && (
             <div className="p-3">
               <ErrorBanner error={etaErr} onRetry={() => setEtaRetry((n) => n + 1)} />
+            </div>
+          )}
+          {!etaErr && etasNote && etas?.length === 0 && (
+            <div className="border-b border-edge px-4 py-3 font-mono text-xs leading-relaxed text-fog">
+              NO LIVE BUS ON THIS ROUTE RIGHT NOW — THE TRIP MAY HAVE JUST ENDED.
+              CHECK ANOTHER ROUTE OR CATCH THE NEXT DEPARTURE.
             </div>
           )}
           {route.stops.map((stop) => {

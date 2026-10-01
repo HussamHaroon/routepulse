@@ -477,7 +477,10 @@ app.get('/api/routes/:id/etas', (req, res) => {
     }
   }
   if (!busId || !positions.get(busId)) {
-    return res.status(404).json({ error: 'no active bus on this route' });
+    // Transient state, not an outage: the route's bus just ended/cancelled or
+    // hasn't reported a position yet. 200 + empty list so the UI shows a calm
+    // "no live bus" note instead of an "API may be down" banner.
+    return res.json({ etas: [], reason: 'no-active-bus' });
   }
   const { etas } = computeEtas(routeId, busId);
   res.json({ etas });
