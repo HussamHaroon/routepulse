@@ -57,7 +57,17 @@ export function useLiveLocations(mock) {
       ws.onmessage = (e) => {
         try {
           const frame = JSON.parse(e.data)
-          if (frame.type === 'location') upsert(frame)
+          if (frame.type === 'snapshot') {
+            // server sends a full fleet snapshot on connect
+            setState((s) => ({ ...s, locations: frame.locations || [], source: 'ws' }))
+          } else if (frame.type === 'location') {
+            upsert(frame)
+          } else if (frame.type === 'trip_ended') {
+            setState((s) => ({
+              ...s,
+              locations: s.locations.filter((x) => x.bus_id !== frame.bus_id),
+            }))
+          }
         } catch {
           /* ignore malformed frames */
         }

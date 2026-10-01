@@ -102,4 +102,10 @@ export const ingestGps = (busId, body, mock) => {
   })
 }
 
-export const WS_URL = 'ws://localhost:8787'
+// WS endpoint. Backend serves WS on the same port at path /ws (see api/server.js).
+// dev: backend listens directly on :8787. prod (single URL): same host as the page.
+export const WS_URL = (() => {
+  if (import.meta.env.DEV) return 'ws://localhost:8787/ws'
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  return `${proto}//${window.location.host}/ws`
+})()
