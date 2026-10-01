@@ -16,10 +16,10 @@ const STEPS = [
 ]
 
 const ROLL_ROUTES = [
-  ['7', 'City Center', 'University Gate'],
-  ['5', 'Central Station', 'Bus Terminal'],
-  ['3', 'Airport', 'City Center'],
-  ['9', 'City Center', 'University Gate'],
+  ['1', 'Shahdara', 'Kalma Chowk'],
+  ['3', 'Railway Station', 'Liberty Market'],
+  ['6', 'Thokar Niaz Baig', 'Model Town'],
+  ['8', 'Airport', 'Gulberg Main Blvd'],
 ]
 
 const DEMO_STATS = {
@@ -167,9 +167,6 @@ export default function Home() {
             passengers, drivers and operators.
           </p>
           <div className="mt-9">
-            <DestinationRoll />
-          </div>
-          <div className="mt-7">
             <DestinationRoll />
           </div>
           <div className="mt-9 flex flex-col gap-4 sm:mt-10 sm:flex-row sm:items-center sm:gap-6">
