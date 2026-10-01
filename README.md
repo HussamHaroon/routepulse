@@ -53,8 +53,16 @@ simulator/ GPS source ──POST /api/ingest/:bus_id──→                   
 localhost:8787 (single URL: Express serves app/dist + API + WS)            SQLite (auto-seeded)
 ```
 
-- ETA engine: remaining distance along route polyline ÷ rolling average observed speed, adjusted by trip delay; **confidence** (high/medium/low) from sample count, speed variance and position freshness.
-- **Boarding alarm:** on any track page, pick your stop and hit ARM — when the live ETA crosses 2 minutes the browser sends a real notification ("Your bus is almost here"). Runs entirely on the client against the same ticking ETAs.
+## Novelty — what makes this different
+
+1. **Confidence-rated ETAs.** Every arrival prediction carries a ± window and a `high / medium / low` grade computed from sample count, speed variance and position freshness — passengers see *"4 min ±1 · high"*, not a fake-precise number.
+2. **Boarding alarm.** Pick your stop, hit ARM, and the browser notifies you the moment the live ETA crosses 2 minutes. The app doesn't just show the bus — it tells you when to leave.
+3. **The two-second round trip.** An operator publishes an alert in the control room; a WebSocket frame lands it on every passenger screen in under two seconds, with a visible radar-ping on the map.
+4. **Delay-rhythm analytics.** The API mines completed-trip history into human verdicts — *"chronic morning delays — budget +19 min around 07:00"* — plus an ETA accuracy self-grade (*"80% of ETAs within 2 min, 408 samples"*).
+5. **One ingest, two GPS sources.** Phone GPS from the driver console and the fleet simulator feed the same endpoint — swap the sim for a real fleet without touching the app.
+6. **Honest degradation.** WebSocket drops → polling takes over; backend dies → the app says so and runs an offline dataset. The demo never shows a blank screen.
+
+- ETA engine: remaining distance along route polyline ÷ rolling average observed speed, adjusted by trip delay; confidence (high/medium/low) from sample count, speed variance and position freshness.
 - Transfers: server-side search finds multi-route connections through shared stops.
 - Live updates: WebSocket push with automatic polling fallback.
 
