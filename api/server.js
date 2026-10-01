@@ -239,7 +239,7 @@ function locationPayload(busId, extraConfidence = true) {
     trip_id: trip.trip_id,
     lat: pos.lat,
     lng: pos.lng,
-    speed: pos.speed,
+    speed: pos.speed != null ? pos.speed : round1(currentSpeedKmh(trip.route_id)),
     delay_minutes: trip.delay_minutes || 0,
     trip_status: trip.trip_status,
     next_stop,
