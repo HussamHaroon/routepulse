@@ -20,6 +20,17 @@ Live public-transport tracking for Lahore: search a route, watch every bus move 
 3. Back in the operator tab, publish a service alert → watch it land on the passenger screen in **under two seconds** over WebSocket.
 4. Try [`/#/search`](https://routepulse-production-50c8.up.railway.app/#/search) — direct + transfer results, fares in PKR, favourite routes ★.
 
+## ✨ Novelty highlights
+
+1. **ETAs with a confidence rating.** Every arrival estimate carries `high / medium / low` confidence plus an uncertainty window (`4 min ±1 · high`), computed from speed-sample count, speed variance and position freshness — we show uncertainty instead of hiding it. The system also **self-grades**: predicted vs actual arrivals are logged (`/api/analytics/eta-accuracy` → "80% of ETAs within 2 min, 408 samples").
+2. **The two-second alert round trip.** An operator publishes a service alert in the control room → WebSocket `alert` frame → every passenger screen flashes the banner in **under two seconds**, no refresh. A radar ping animation on the map makes the round trip visible.
+3. **Boarding alarm.** Pick your stop on any track page, hit **ARM** — when the live ETA crosses 2 minutes the browser fires a real notification ("Your bus is almost here — Data Darbar in ~2 min"). Runs entirely client-side against the ticking ETAs.
+4. **Delay-rhythm analytics.** Completed-trip history is mined into per-route verdicts a human operator can act on: *"chronic morning delays — budget +19 min around 07:00"* (`/api/analytics/delay-patterns`).
+5. **Dual GPS sources, one endpoint.** The driver console (real phone geolocation) and the built-in simulator POST to the same `/api/ingest/:bus_id` — the path from demo to a real fleet is a config change, not a rewrite.
+6. **Crowd reporting.** Passengers report `empty / seats / packed`; the level fans out over WebSocket and feeds route search results.
+7. **Living-timetable design system.** Paper register (passengers) vs night register (operators) — one idea, two registers, Clash Display identity, vivid per-route palette, sepia-tinted CARTO basemaps.
+8. **Graceful degradation everywhere.** WS drops → polling; backend down → offline demo dataset with an honest badge; boots with trips on missing routes → guarded, never crash-loops.
+
 ## Demo (local)
 
 - Local: `npm install` at root, then `npm run dev` → app on :5173, API + GPS simulator on :8787
