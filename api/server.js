@@ -39,8 +39,8 @@ app.disable('x-powered-by');
 // still caps floods (~1 req/s sustained) but won't lock out a judge whose
 // browser polls ETAs/alerts/stats from a single IP. Ingest gets its own
 // looser bucket (machine GPS traffic).
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, standardHeaders: true, legacyHeaders: false });
-const ingestLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1200, standardHeaders: true, legacyHeaders: false });
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 8000, standardHeaders: true, legacyHeaders: false });
+const ingestLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 8000, standardHeaders: true, legacyHeaders: false });
 app.use('/api/ingest', ingestLimiter);
 app.use('/api', apiLimiter);
 

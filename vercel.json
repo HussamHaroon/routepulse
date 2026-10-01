@@ -2,5 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "app/dist",
-  "installCommand": "npm install --prefix app --no-audit --no-fund"
+  "installCommand": "npm install --prefix app --no-audit --no-fund",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://routepulse-production-50c8.up.railway.app/api/:path*"
+    }
+  ]
 }
